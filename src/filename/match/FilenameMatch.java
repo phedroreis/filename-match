@@ -89,6 +89,18 @@ public final class  FilenameMatch {
     */
     private static boolean checkSha = false;
     
+    /*
+    Guardarah o objeto da saida padrao para poder restaura-lo, caso esta seja
+    redirecionada para um arquivo 
+    */
+    private static PrintStream console = null;
+    
+    /*
+    O valor desta variavel global eh atribuido no metodo main() e utilizado no
+    metodo isMatch() para determinar quando abandonar o loop
+    */
+    private static int impossibleMatchIndex;
+    
     /*-------------------------------------------------------------------------
                     Processa os prompts de entrada do usuario
     --------------------------------------------------------------------------*/      
@@ -238,7 +250,10 @@ public final class  FilenameMatch {
             err = false; 
             try { 
               
-                System.out.println("\nArquivo de sa\u00edda (com o caminho):");
+                System.out.println(
+                    "\nArquivo de sa\u00edda (pode incluir caminho absoluto" +
+                    " ou relativo):"
+                );
                 System.out.print("[ENTER = sa\u00edda na tela] > ");
                 String outputFilename = inputReader.readLine(); 
                 
@@ -254,9 +269,10 @@ public final class  FilenameMatch {
                 //Se o arquivo selecionado jah existir, este serah apagado
                 if (outputFile.exists()) outputFile.delete();
                                
-                if (!outputFile.createNewFile()) throw new IllegalArgumentException(
-                   "Imposs\u00edvel criar arquivo"
-                );
+                if (!outputFile.createNewFile()) 
+                    throw new IllegalArgumentException(
+                        "Imposs\u00edvel criar arquivo"
+                    );
         
             }
             catch(IllegalArgumentException | IOException e) {
@@ -281,7 +297,9 @@ public final class  FilenameMatch {
         if (outputFile != null) {
             
             outputStream = new PrintStream(new FileOutputStream(outputFile));
-            System.setOut(outputStream);            
+            console = System.out;    
+            System.setOut(outputStream); 
+      
         }
          
     }//readInputs
@@ -509,8 +527,8 @@ public final class  FilenameMatch {
         
         int matchCounter = 0;
         int sourceIndex = 1;
-        int targetIndex = 1;
-        
+        int targetIndex = 1;        
+               
         while (sourceIndex < sourceArray.length) {
             
             if (
@@ -549,8 +567,8 @@ public final class  FilenameMatch {
             targetIndex++;
             
             if (targetIndex == targetArray.length) {
-                
-                sourceIndex++;
+          
+                if (++sourceIndex == impossibleMatchIndex) break;
                 targetIndex = 1;
                 matchCounter = 0;
                 
@@ -663,13 +681,21 @@ public final class  FilenameMatch {
       
             //Le as entradas do usuario
             readInputs();
-        
+            
+            long start = System.currentTimeMillis();
+            
             /*Obtem uma lista (PATHNAMES_LIST) com os nomes de todos os arquivos 
             validos no diretorio corrente e nos seus subdiretorios. Arquivos 
             validos serao aqueles que tiverem extensoes pertencentes ao conjunto
             de extensoes validas definidas pelo usuario
             */        
             getPathnames(searchDir);
+            
+            int tenPercent = PATHNAMES_LIST.size() / 10;
+            
+            int countPoints = 0;
+            
+            if (outputStream != null) console.println();
               
             /*
             Percorre todos os arquivos em PATHNAMES_LIST e compara o nome de 
@@ -679,7 +705,26 @@ public final class  FilenameMatch {
             for (String absolutePath: PATHNAMES_LIST) {
                 
                 String[] sourceArray = getTokens(absolutePath);
-
+                
+                /*
+                Se o token de sourceArray a ser comparado tiver este indice e
+                for o 1o da sequencia, serah impossivel encontrar 
+                correspondencia porque o no. de tokens que ainda restam depois
+                deste (em sourceArray) evidentemente serah menor que matchLenght
+                */
+                impossibleMatchIndex = sourceArray.length - matchLength + 1;
+                
+                if (outputStream != null) {
+                    
+                    console.print('.');
+                    
+                    if (((tenPercent > 0) && (++countPoints % tenPercent == 0))) 
+                        console.printf(
+                            " ~ %d%% \n", countPoints * 10 / tenPercent
+                        );
+                       
+                }
+                
                 lookForMatches("", sourceArray, searchDir);
             }
             
@@ -694,7 +739,16 @@ public final class  FilenameMatch {
             Se as saidas foram redirecionadas para um arquivo, este arquivo 
             agora serah fechado
             */
-            if (outputStream != null) outputStream.close();  
+            if (outputStream != null) {
+                
+                outputStream.close();
+                System.setOut(console);
+            }             
+    
+             
+            System.out.printf(
+                "\n\nFeito! (%,d seg.)\n", (System.currentTimeMillis()-start)/1000
+            );
         }
         catch(IOException e) {
             
