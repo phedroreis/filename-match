@@ -89,17 +89,24 @@ public final class  FilenameMatch {
     */
     private static boolean checkSha = false;
     
+    private static boolean fullSearch = false;
+    
     /*
-    Guardarah o objeto da saida padrao para poder restaura-lo, caso esta seja
-    redirecionada para um arquivo 
+    Escreve no objeto da saida padrao mesmo quando este estiver direcionado a
+    um arquivo
     */
-    private static PrintStream console = null;
+    private static final PrintStream CONSOLE = System.out;
     
     /*
     O valor desta variavel global eh atribuido no metodo main() e utilizado no
     metodo isMatch() para determinar quando abandonar o loop
     */
     private static int impossibleMatchIndex;
+    
+    /*
+    Nome do arquivo de saida default
+    */
+    private static final String OUTPUT_FILENAME = "Lista.txt";
     
     /*-------------------------------------------------------------------------
                     Processa os prompts de entrada do usuario
@@ -254,15 +261,25 @@ public final class  FilenameMatch {
                     "\nArquivo de sa\u00edda (pode incluir caminho absoluto" +
                     " ou relativo):"
                 );
-                System.out.print("[ENTER = sa\u00edda na tela] > ");
+                System.out.print(
+                    "[ENTER = " + 
+                    OUTPUT_FILENAME + 
+                    " , /console = sa\u00edda no terminal] > "
+                );
                 String outputFilename = inputReader.readLine(); 
                 
                 /*
-                Entrada nula define opaco defaul de saidas na tela. O objeto
-                outputFile permanece com valor null e isso faz com que as saidas
-                nao sejam redirecionadas para algum arquivo
+                Se o usuario digitar a String /console a saida sera no terminal
+                O objeto outputFile permanece com valor null e isso faz com que 
+                as saidas nao sejam redirecionadas para algum arquivo
                 */
-                if (outputFilename.isBlank()) break;
+                if (outputFilename.equals("/console")) break;
+                
+                /*
+                Entrada nula define opaco default de saida para o arquivo
+                OUTPUT_FILENAME
+                */
+                if (outputFilename.isBlank()) outputFilename = OUTPUT_FILENAME;
                 
                 outputFile = new File(outputFilename);
                 
@@ -297,7 +314,6 @@ public final class  FilenameMatch {
         if (outputFile != null) {
             
             outputStream = new PrintStream(new FileOutputStream(outputFile));
-            console = System.out;    
             System.setOut(outputStream); 
       
         }
@@ -518,6 +534,7 @@ public final class  FilenameMatch {
         final String[] sourceArray,
         final String targetStr
     ) {
+        boolean isMatch = false;
         
         /*
         Obtem o array de tokens da String alvo (que eh o nome do arquivo sem
@@ -550,18 +567,31 @@ public final class  FilenameMatch {
             
             if (matchCounter == matchLength) {
                 
-                sourceIndex = sourceIndex - matchCounter;
+                //sourceIndex = sourceIndex - matchCounter;
                 
-                String match = "";
+                int start = sourceIndex - matchCounter;
+               
+                int j = start + matchCounter - 1;
                 
-                int j = sourceIndex + matchCounter - 1;
+                //int j = sourceIndex + matchCounter - 1;
                 
-                for (int i = sourceIndex; i <= j; i++)
-                    match = match + sourceArray[i] + (i < j ? "-" : "");
+                StringBuilder match = new StringBuilder();
                 
-                MATCHES_SET.add(match.toLowerCase());
+                for (int i = start; i <= j; i++) 
+                    match.append(sourceArray[i]).append(i < j ? "-" : "");                
                 
-                return true;
+                MATCHES_SET.add(match.toString().toLowerCase());
+                
+                if (!fullSearch) return true; else isMatch = true;
+                
+                sourceIndex = sourceIndex - matchCounter + 1;
+                if (sourceIndex == impossibleMatchIndex) break;
+                
+                targetIndex = 1;
+                
+                matchCounter = 0;
+                
+                continue;
             }
             
             targetIndex++;
@@ -576,7 +606,7 @@ public final class  FilenameMatch {
             
         }//fim do while        
        
-        return false;
+        return isMatch;
         
     }//isMatch
     
@@ -675,9 +705,12 @@ public final class  FilenameMatch {
     public static void main(String[] args) throws NoSuchAlgorithmException {
         
        try {
-           
-            //Verifica se o programa foi chamado com o flag -sha
-            if ((args.length > 0) && (args[0].equals("-sha"))) checkSha = true;
+            
+            for (String arg : args) {
+                
+                if (arg.equals("-sha")) checkSha = true;
+                if (arg.equals("-full")) fullSearch = true;
+            }
       
             //Le as entradas do usuario
             readInputs();
@@ -695,7 +728,7 @@ public final class  FilenameMatch {
             
             int countPoints = 0;
             
-            if (outputStream != null) console.println();
+            if (outputStream != null) CONSOLE.println();
               
             /*
             Percorre todos os arquivos em PATHNAMES_LIST e compara o nome de 
@@ -716,13 +749,16 @@ public final class  FilenameMatch {
                 
                 if (outputStream != null) {
                     
-                    console.print('.');
+                    CONSOLE.print('.');
                     
-                    if (((tenPercent > 0) && (++countPoints % tenPercent == 0))) 
-                        console.printf(
-                            " ~ %d%% \n", countPoints * 10 / tenPercent
-                        );
-                       
+                    countPoints++;
+                    
+                    int percentual = countPoints * 10 / tenPercent;                    
+                                        
+                    if ((tenPercent > 0) && (countPoints % tenPercent == 0)) 
+                        CONSOLE.printf(
+                            percentual <= 100 ? " ~ %d%% \n" : "", percentual
+                        );                       
                 }
                 
                 lookForMatches("", sourceArray, searchDir);
@@ -742,7 +778,7 @@ public final class  FilenameMatch {
             if (outputStream != null) {
                 
                 outputStream.close();
-                System.setOut(console);
+                System.setOut(CONSOLE);
             }             
     
              
