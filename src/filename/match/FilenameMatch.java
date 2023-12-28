@@ -35,6 +35,14 @@ public final class  FilenameMatch {
     private static final Set<String> MATCHES_SET = new LinkedHashSet<>();
     
     /*
+    Um cash que armazena hashs sha256 jah calculados como um mapa, associando 
+    cada hash obtido com o pathname do seu arquivo. Sua funcao eh evitar de 
+    calcular o hash de um arquivo mais de uma vez. Se jah estiver neste mapa, o
+    hash sha eh retornado
+    */
+    private static Map<String,String> shaMap;
+    
+    /*
     Essa string define os caracteres que serao considerados delimitadores de
     palavras nos nomes de arquivos
     */
@@ -49,11 +57,22 @@ public final class  FilenameMatch {
     O diretorio a partir do qual serah feita a varredura
     */
     private static File searchDir = null;
+    
+    /*
+    Nome do arquivo de saida default
+    */
+    private static final String OUTPUT_FILENAME = "Lista.txt";
      
     /*
     Arquivo para onde redirecionar a saida padrao de texto
     */
     private static PrintStream outputStream = null;
+    
+    /*
+    Escreve no objeto da saida padrao mesmo quando este estiver direcionado a
+    um arquivo
+    */
+    private static final PrintStream CONSOLE = System.out;
     
     /*
     Esta constante serve para testar se o usuario entrou com um dado que pode
@@ -73,15 +92,7 @@ public final class  FilenameMatch {
     Define o comprimento minimo para tokens (em caracteres)
     */
     private static int minimumTokenLength = RANDOM_NEGATIVE;
-    
-    /*
-    Um cash que armazena hashs sha256 jah calculados como um mapa, associando 
-    cada hash obtido com o pathname do seu arquivo. Sua funcao eh evitar de 
-    calcular o hash de um arquivo mais de uma vez. Se jah estiver neste mapa, o
-    hash sha eh retornado
-    */
-    private static Map<String,String> shaMap;
-    
+     
     /*
     Determina se o conteudo dos arquivos que dao match serao ou nao comparados
     para ver se sao iguais. O flag -sha, que deve ser passado como argumento ao
@@ -89,24 +100,23 @@ public final class  FilenameMatch {
     */
     private static boolean checkSha = false;
     
+    /*
+    Determina se o progorama fara ou nao uma pesquisa exaustiva por substrings
+    coincidentes entre nomes de arquivos
+    */
     private static boolean fullSearch = false;
     
     /*
-    Escreve no objeto da saida padrao mesmo quando este estiver direcionado a
-    um arquivo
+    Deternina se os subdiretorios do diretorio de varredura tambem serao 
+    pesquisados
     */
-    private static final PrintStream CONSOLE = System.out;
+    private static boolean includeSubdirs = false;
     
     /*
     O valor desta variavel global eh atribuido no metodo main() e utilizado no
     metodo isMatch() para determinar quando abandonar o loop
     */
     private static int impossibleMatchIndex;
-    
-    /*
-    Nome do arquivo de saida default
-    */
-    private static final String OUTPUT_FILENAME = "Lista.txt";
     
     /*-------------------------------------------------------------------------
                     Processa os prompts de entrada do usuario
@@ -132,7 +142,7 @@ public final class  FilenameMatch {
               
                 System.out.println("\nDiret\u00f3rio de varredura:");
                 System.out.print("[ENTER = Diret\u00f3rio corrente] > ");
-                String input = inputReader.readLine();
+                String input = inputReader.readLine(); 
                 
                 //Entrada em branco seleciona diretorio corrente
                 if (input.isBlank()) input = ".";
@@ -159,6 +169,32 @@ public final class  FilenameMatch {
             }
           
         } while(err);
+        
+        
+        do {  //Varre subdiretorios?
+            
+            err = false;
+              
+                System.out.println("\nPesquisar subdiret\u00f3rios? (S/n):");
+                System.out.print("[ENTER = N\u00e3o] > ");
+                String input = inputReader.readLine(); 
+                
+                //Entrada em branco seleciona nao pesquisar subdiretorios
+                if (input.isBlank()) break;
+                
+                switch (input.toLowerCase()) {
+                    
+                    case "s", "sim" -> includeSubdirs = true;
+                    case "n", "n\u00e3o" -> {
+                }
+                    default -> {
+                        System.out.println("\nEntrada inv\u00e1lida!");
+                        err = true;
+                }
+                }                
+  
+        } while(err); 
+        
         
         do {  //Seleciona o n. minimo de tokens coincidentes para dar match  
             
@@ -248,7 +284,8 @@ public final class  FilenameMatch {
                 err = true;
             }
           
-        } while(err);            
+        } while(err);   
+        
      
         File outputFile = null;
         
@@ -300,12 +337,14 @@ public final class  FilenameMatch {
           
         } while(err); 
         
+        
         //Define os tipos de arquivos que serao pesquisados
         System.out.println(
             "\nExtens\u00f5es de arquivos a serem pesquisados " +
             "(sem ponto e separadas por espa\u00e7o):"
         );
         System.out.print("[ENTER = qualquer arquivo] > ");
+        
    
         fileExtensions = inputReader.readLine().toLowerCase() + " "; 
         
@@ -328,10 +367,13 @@ public final class  FilenameMatch {
         
         File[] fileList = dir.listFiles(
                 
+            //declara classe anonima    
             new FileFilter() {
               
                 @Override
                 public boolean accept(File file) {
+                    
+                  if (file.isDirectory() && (!includeSubdirs)) return false; 
                     
                   if (file.isDirectory() || fileExtensions.isBlank()) return true;
                   
@@ -446,12 +488,12 @@ public final class  FilenameMatch {
                 messageDigest.digest(Files.readAllBytes(Paths.get(absolutePath)));
             
         }
-        else {/*Maior que 100MB le blocos de 40MB de cada vez*/
+        else {/*Maior que 100MB le blocos de 80MB de cada vez*/
             
             try 
                (FileInputStream inputFile = new FileInputStream(absolutePath)) {
                 
-                byte[] dataBytes = new byte[2097152];
+                byte[] dataBytes = new byte[4194304];
                 int bytesFromFile;
 
                 while ( (bytesFromFile=inputFile.read(dataBytes)) != -1 ) {
@@ -522,7 +564,11 @@ public final class  FilenameMatch {
         mapa eh estimada em 10% do numero total de arquivos, jah que nem todos 
         terao matches e portanto nem todos terao que ter seus hashs obtidos
         */
-        shaMap = new HashMap<>(fileList.length / 10);
+        int initialCapacity = fileList.length / 10 ; 
+        
+        if (initialCapacity < 8) initialCapacity = fileList.length;
+        
+        shaMap = new HashMap<>(initialCapacity);
         
     }//getPathnames
      
@@ -724,9 +770,43 @@ public final class  FilenameMatch {
             */        
             getPathnames(searchDir);
             
-            int tenPercent = PATHNAMES_LIST.size() / 10;
+            int pathnamesListSize = PATHNAMES_LIST.size();
+            
+            int steps = 100; //PATHNAME_LIST size > 3000
+            
+            if (pathnamesListSize < 2) {
+                CONSOLE.println("\nSem arquivos para comparar.");
+                System.exit(0);
+            }else if (pathnamesListSize < 61) {                
+                steps = 1;                
+            }else if (pathnamesListSize < 121) {                
+                steps = 2;                
+            }else if (pathnamesListSize < 241) {                
+                steps = 4;                
+            }else if (pathnamesListSize < 301) {                
+                steps = 5;                
+            }else if (pathnamesListSize < 601) {                
+                steps = 10;                
+            }else if (pathnamesListSize < 1201) {                
+                steps = 20;                
+            }else if (pathnamesListSize < 1501) {                
+                steps = 25;                
+            }else if (pathnamesListSize < 3001) {                
+                steps = 50;                
+            }  
+            
+            int rest = pathnamesListSize % steps;
+            
+            int pointsInEachStep = (pathnamesListSize - rest) / steps;
+                 
+            int increment = 100 / steps;
+            
+            int done = 0;
             
             int countPoints = 0;
+                  
+            String format = 
+                (rest == 0 || pointsInEachStep == 0) ? " %d%% \n" : " ~ %d%% \n";
             
             if (outputStream != null) CONSOLE.println();
               
@@ -749,21 +829,24 @@ public final class  FilenameMatch {
                 
                 if (outputStream != null) {
                     
-                    CONSOLE.print('.');
+                    CONSOLE.print('.'); 
                     
-                    countPoints++;
-                    
-                    int percentual = countPoints * 10 / tenPercent;                    
-                                        
-                    if ((tenPercent > 0) && (countPoints % tenPercent == 0)) 
-                        CONSOLE.printf(
-                            percentual <= 100 ? " ~ %d%% \n" : "", percentual
-                        );                       
-                }
+                    if (
+                            pointsInEachStep != 0 
+                                         && 
+                            ++countPoints % pointsInEachStep == 0
+                    ) {
+                        
+                        done += increment;
+                            
+                        CONSOLE.printf(format, done);   
+                    }                                            
+                } 
                 
                 lookForMatches("", sourceArray, searchDir);
-            }
-            
+                
+            }//for
+                 
             /*
             Apresenta uma listagem de todas as strings que produziram matches,
             cada uma delas com os respectivos arquivos que possuem esta string
