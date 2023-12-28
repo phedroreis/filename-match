@@ -264,7 +264,7 @@ public final class  FilenameMatch {
                 System.out.print(
                     "[ENTER = " + 
                     OUTPUT_FILENAME + 
-                    " , /console = sa\u00edda no terminal] > "
+                    " , //console = sa\u00edda no terminal] > "
                 );
                 String outputFilename = inputReader.readLine(); 
                 
@@ -273,7 +273,7 @@ public final class  FilenameMatch {
                 O objeto outputFile permanece com valor null e isso faz com que 
                 as saidas nao sejam redirecionadas para algum arquivo
                 */
-                if (outputFilename.equals("/console")) break;
+                if (outputFilename.equals("//console")) break;
                 
                 /*
                 Entrada nula define opaco default de saida para o arquivo
