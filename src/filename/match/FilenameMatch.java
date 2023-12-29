@@ -104,19 +104,13 @@ public final class  FilenameMatch {
     Determina se o progorama fara ou nao uma pesquisa exaustiva por substrings
     coincidentes entre nomes de arquivos
     */
-    private static boolean fullSearch = false;
+    private static boolean shortSearch = false;
     
     /*
     Deternina se os subdiretorios do diretorio de varredura tambem serao 
     pesquisados
     */
     private static boolean includeSubdirs = false;
-    
-    /*
-    O valor desta variavel global eh atribuido no metodo main() e utilizado no
-    metodo isMatch() para determinar quando abandonar o loop
-    */
-    private static int impossibleMatchIndex;
     
     /*-------------------------------------------------------------------------
                     Processa os prompts de entrada do usuario
@@ -430,12 +424,32 @@ public final class  FilenameMatch {
         
         while (tokenizer.hasMoreTokens()) {
               
-            tokensArray[countTokens++] = tokenizer.nextToken(); 
+            tokensArray[countTokens++] = tokenizer.nextToken().toLowerCase(); 
         }
 
         return tokensArray;
         
-    }//getTokens    
+    }//getTokens   
+    
+    /*-------------------------------------------------------------------------
+           
+    --------------------------------------------------------------------------*/  
+    private static String getTokensSequence(
+        final String[] tokens,
+        final int startIndex,
+        final int length
+    ) {
+        
+        StringBuilder tokensSequence = new StringBuilder();
+        
+        int lastIndex = startIndex + length - 1;
+        
+        for (int i = startIndex; i <= lastIndex ; i++) 
+            tokensSequence.append(tokens[i]).append((i == lastIndex) ? "" : "-");
+        
+        return tokensSequence.toString();
+        
+    }//getTokensSequence
     
     /*-------------------------------------------------------------------------
             Lista todos os arquivos com um determinado match no nome
@@ -450,12 +464,10 @@ public final class  FilenameMatch {
                
                String[] tokens = getTokens(absolutePath);
                
-               StringBuilder normalized = new StringBuilder();
+               String tokensSequence = 
+                    getTokensSequence(tokens, 1, tokens.length - 1);
                
-               for (int i = 1; i < tokens.length; i++) 
-                   normalized.append(tokens[i]).append('-');
-               
-               if (normalized.toString().toLowerCase().contains(match))
+               if (tokensSequence.contains(match))
                    System.out.println(absolutePath);
                
             }//for
@@ -542,6 +554,9 @@ public final class  FilenameMatch {
         */
         File[] fileList = getFileList(dir);
         
+        if (outputStream != null) 
+            CONSOLE.println("Pesquisando em " + dir + " ...");
+        
         for (File file : fileList) {
             
             if (file.isFile()) {
@@ -571,90 +586,70 @@ public final class  FilenameMatch {
         shaMap = new HashMap<>(initialCapacity);
         
     }//getPathnames
-     
+    
     /*-------------------------------------------------------------------------
           Verifica se ha match entre a string source (jah convertida para
           array de tokens) e a string target        
-    --------------------------------------------------------------------------*/    
+    --------------------------------------------------------------------------*/        
     private static boolean isMatch(
         final String[] sourceArray,
         final String targetStr
     ) {
-        boolean isMatch = false;
         
+        boolean isMatch = false;
         /*
         Obtem o array de tokens da String alvo (que eh o nome do arquivo sem
         sua extensao)
         */
-        String[] targetArray = getTokens(targetStr);
+        String[] targetArray = getTokens(targetStr); 
         
-        int matchCounter = 0;
-        int sourceIndex = 1;
-        int targetIndex = 1;        
-               
-        while (sourceIndex < sourceArray.length) {
-            
-            if (
-                sourceArray[sourceIndex].length() >= minimumTokenLength
-                                    &&
-                sourceArray[sourceIndex].
-                    equalsIgnoreCase(targetArray[targetIndex])
-            ) {
+        int lastSrcIndex = sourceArray.length - matchLength;
+        
+        int lastTrgtIndex = targetArray.length - matchLength;
+        
+        for (int srcIndex = 1; srcIndex <= lastSrcIndex; srcIndex++) {
+                    
+            for (int trgtIndex = 1; trgtIndex <= lastTrgtIndex; trgtIndex++) {
                 
-                sourceIndex++;
-                matchCounter++;
+                int matchCounter = 0;
                 
-            } else {
+                for (int i = 0; i < matchLength; i++) {
+                    
+                    if (
+                        sourceArray[srcIndex+i].length() >= minimumTokenLength
+                    
+                                          &&
+                        sourceArray[srcIndex+i].equals(targetArray[trgtIndex+i])
+                    )
+                        matchCounter++;
+                    else
+                        break;
+                }//for i
                 
-                sourceIndex = sourceIndex - matchCounter;
-                matchCounter = 0;
-                
-            }//fim do if-else
-            
-            if (matchCounter == matchLength) {
-                              
-                int firstTokenIndex = sourceIndex - matchCounter;
-               
-                //Na verdade, uma posicao a frente do indice do ultimo token
-                int lastTokenIndex = firstTokenIndex + matchCounter;
-                           
-                StringBuilder match = new StringBuilder();
-                
-                for (int i = firstTokenIndex; i < lastTokenIndex; i++) 
-                    match.append(sourceArray[i]).
-                        append(i == (lastTokenIndex - 1) ? "" : "-");                
-                
-                MATCHES_SET.add(match.toString().toLowerCase());
-                
-                if (fullSearch) isMatch = true; else return true; 
-                
-                sourceIndex = sourceIndex - matchCounter + 1;
-                if (sourceIndex == impossibleMatchIndex) break;
-                
-                targetIndex = 1;
-                
-                matchCounter = 0;
-                
-            } else {
-                
-                targetIndex++;
+                if (matchCounter == matchLength) {
+                                  
+                    MATCHES_SET.add(
+                        getTokensSequence(
+                            sourceArray,
+                            srcIndex, 
+                            matchCounter
+                        )
+                    );  
+                    
+                    if (shortSearch) return true;
+                    
+                    isMatch = true;
 
-                if (targetIndex == targetArray.length) {
-
-                    if (++sourceIndex == impossibleMatchIndex) break;
-                    targetIndex = 1;
-                    matchCounter = 0;
-
-                }//fim do if
-                
-            }//fim do if-else
+                }//if
+                   
+            }//for sourceIndex    
             
-        }//fim do while        
-       
+        }//for targetIndex
+        
         return isMatch;
         
     }//isMatch
-    
+        
     /*-------------------------------------------------------------------------
         Recebe o array com os tokens de um nome de arquivo e compara com os
         nomes de todos os arquivos no diretorio corrente e nos seus
@@ -754,7 +749,7 @@ public final class  FilenameMatch {
             for (String arg : args) {
                 
                 if (arg.equals("-sha")) checkSha = true;
-                if (arg.equals("-full")) fullSearch = true;
+                if (arg.equals("-short")) shortSearch = true;
             }
       
             //Le as entradas do usuario
@@ -766,7 +761,8 @@ public final class  FilenameMatch {
             validos no diretorio corrente e nos seus subdiretorios. Arquivos 
             validos serao aqueles que tiverem extensoes pertencentes ao conjunto
             de extensoes validas definidas pelo usuario
-            */        
+            */   
+            if (outputStream != null) CONSOLE.println();
             getPathnames(searchDir);
             
             int pathnamesListSize = PATHNAMES_LIST.size();
@@ -817,14 +813,6 @@ public final class  FilenameMatch {
             for (String absolutePath: PATHNAMES_LIST) {
                 
                 String[] sourceArray = getTokens(absolutePath);
-                
-                /*
-                Se o token de sourceArray a ser comparado tiver este indice e
-                for o 1o da sequencia, serah impossivel encontrar 
-                correspondencia porque o no. de tokens que ainda restam depois
-                deste (em sourceArray) evidentemente serah menor que matchLenght
-                */
-                impossibleMatchIndex = sourceArray.length - matchLength + 1;
                 
                 if (outputStream != null) {
                     
