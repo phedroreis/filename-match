@@ -301,7 +301,7 @@ public final class  FilenameMatch {
                 System.out.print(
                     "[ENTER = " + 
                     OUTPUT_FILENAME + 
-                    " , //console = sa\u00edda no terminal] > "
+                    " , //console = Sa\u00edda no terminal] > "
                 );
                 String outputFilename = inputReader.readLine(); 
                 
@@ -343,7 +343,7 @@ public final class  FilenameMatch {
             "\nExtens\u00f5es de arquivos a serem pesquisados " +
             "(sem ponto e separadas por espa\u00e7o):"
         );
-        System.out.print("[ENTER = qualquer arquivo] > ");
+        System.out.print("[ENTER = Qualquer arquivo] > ");
         
    
         fileExtensions = inputReader.readLine().toLowerCase() + " "; 
@@ -596,7 +596,7 @@ public final class  FilenameMatch {
             
             if (
                 sourceArray[sourceIndex].length() >= minimumTokenLength
-                    &&
+                                    &&
                 sourceArray[sourceIndex].
                     equalsIgnoreCase(targetArray[targetIndex])
             ) {
@@ -612,23 +612,21 @@ public final class  FilenameMatch {
             }//fim do if-else
             
             if (matchCounter == matchLength) {
-                
-                //sourceIndex = sourceIndex - matchCounter;
-                
-                int start = sourceIndex - matchCounter;
+                              
+                int firstTokenIndex = sourceIndex - matchCounter;
                
-                int j = start + matchCounter - 1;
-                
-                //int j = sourceIndex + matchCounter - 1;
-                
+                //Na verdade, uma posicao a frente do indice do ultimo token
+                int lastTokenIndex = firstTokenIndex + matchCounter;
+                           
                 StringBuilder match = new StringBuilder();
                 
-                for (int i = start; i <= j; i++) 
-                    match.append(sourceArray[i]).append(i < j ? "-" : "");                
+                for (int i = firstTokenIndex; i < lastTokenIndex; i++) 
+                    match.append(sourceArray[i]).
+                        append(i == (lastTokenIndex - 1) ? "" : "-");                
                 
                 MATCHES_SET.add(match.toString().toLowerCase());
                 
-                if (!fullSearch) return true; else isMatch = true;
+                if (fullSearch) isMatch = true; else return true; 
                 
                 sourceIndex = sourceIndex - matchCounter + 1;
                 if (sourceIndex == impossibleMatchIndex) break;
@@ -637,18 +635,19 @@ public final class  FilenameMatch {
                 
                 matchCounter = 0;
                 
-                continue;
-            }
-            
-            targetIndex++;
-            
-            if (targetIndex == targetArray.length) {
-          
-                if (++sourceIndex == impossibleMatchIndex) break;
-                targetIndex = 1;
-                matchCounter = 0;
+            } else {
                 
-            }//fim do if
+                targetIndex++;
+
+                if (targetIndex == targetArray.length) {
+
+                    if (++sourceIndex == impossibleMatchIndex) break;
+                    targetIndex = 1;
+                    matchCounter = 0;
+
+                }//fim do if
+                
+            }//fim do if-else
             
         }//fim do while        
        
