@@ -110,6 +110,11 @@ public final class  FilenameMatch {
     */
     private static boolean includeSubdirs = false;
     
+    /*
+    Impede que o pathname de um arquivo seja impresso mais de uma vez
+    */
+    private static boolean printlnMatchesPara;
+    
     /*-------------------------------------------------------------------------
                     Processa os prompts de entrada do usuario
     --------------------------------------------------------------------------*/      
@@ -480,8 +485,6 @@ public final class  FilenameMatch {
     private static String getSHA256(final String absolutePath) 
         throws IOException, NoSuchAlgorithmException {
         
-        if (!checkSha) return "#";
-        
         //Procura o sha256 no cash shaMap
         if (shaMap.containsKey(absolutePath)) return shaMap.get(absolutePath);
         
@@ -660,7 +663,6 @@ public final class  FilenameMatch {
         O parametro dir indica o diretorio de pesquisa
     --------------------------------------------------------------------------*/    
     private static void lookForMatches(
-        String sourceSHA,    
         final String[] sourceArray, 
         final File dir
     ) throws IOException, NoSuchAlgorithmException {
@@ -692,14 +694,14 @@ public final class  FilenameMatch {
                     sourceSHA (passada inicialmente como vazia) deixarah de ser
                     vazia e isso impedirah que seja escrito novamente
                     */
-                    if (sourceSHA.isEmpty()) {
+                    if (printlnMatchesPara) {
                         
                         System.out.println(
                             "\nMatches para \"" + sourceArray[0] + "\" : \n"
                         );
                         
-                        sourceSHA = getSHA256(sourceArray[0]);
-                        
+                        printlnMatchesPara = false;
+        
                     }//if (sourceSHA.isEmpty())
                     
                     /*
@@ -707,7 +709,9 @@ public final class  FilenameMatch {
                     conteudos identicos. Se checkSha foi selecionado FALSE pelo 
                     usuario, este teste eh pulado
                     */
-                    if (checkSha) {                  
+                    if (checkSha) {  
+                        
+                        String sourceSHA = getSHA256(sourceArray[0]);
 
                         String targetSHA = getSHA256(absolutePath);
 
@@ -730,7 +734,7 @@ public final class  FilenameMatch {
                 
                /*Se file eh subdiretorio, o metodo se chama recursivamente
                 para continuar a pesquisa neste subdiretorio*/               
-                lookForMatches(sourceSHA, sourceArray, targetFile);
+                lookForMatches(sourceArray, targetFile);
                 
             }//fim do if-else            
         }
@@ -828,7 +832,8 @@ public final class  FilenameMatch {
                     }                                            
                 } 
                 
-                lookForMatches("", sourceArray, searchDir);
+                printlnMatchesPara = true;
+                lookForMatches(sourceArray, searchDir);
                 
             }//for
                  
