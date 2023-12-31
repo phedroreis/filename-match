@@ -356,6 +356,8 @@ public final class  FilenameMatch {
          
     }//readInputs
     
+   
+    
     /*-------------------------------------------------------------------------
           Retorna uma lista filtrada de files que contem apenas diretorios e
           arquivos com as extensoes selecionadas pelo usuario
@@ -405,6 +407,53 @@ public final class  FilenameMatch {
         
     }//getFilenameFromPath
     
+ /*-------------------------------------------------------------------------
+          Retorna uma versao em minusculas e sem acentos de uma String
+    --------------------------------------------------------------------------*/  
+    private static String normalizeString(final String str) {
+        
+        char[] charArray = str.toLowerCase().toCharArray();
+        
+        for (int i = 0; i < charArray.length; i++) {
+            
+            switch(charArray[i]) {
+                case '\u00e0':
+                case '\u00e1':
+                case '\u00e2':
+                case '\u00e3':
+                    charArray[i] = 'a'; break;
+                case '\u00e8':
+                case '\u00e9':
+                case '\u00ea':
+                case '\u00eb':
+                    charArray[i] = 'e'; break;
+                case '\u00ec':
+                case '\u00ed':
+                case '\u00ee':
+                case '\u00ef':
+                case '\u0129':
+                    charArray[i] = 'i'; break;
+                case '\u00f2':
+                case '\u00f3':
+                case '\u00f4':
+                case '\u00f5':
+                case '\u00f6':                   
+                    charArray[i] = 'o'; break;
+                case '\u00f9':
+                case '\u00fa':
+                case '\u00fb':
+                case '\u00fc':
+                case '\u0169': 
+                    charArray[i] = 'u'; break;
+                case '\u00e7':
+                    charArray[i] ='c';
+            }
+        }//for
+        
+        return new String(charArray);
+        
+    }//normalizeString    
+    
     /*--------------------------------------------------------------------------
        Extrai para um array todos os tokens (palavras) de um nome de arquivo
     --------------------------------------------------------------------------*/
@@ -427,7 +476,7 @@ public final class  FilenameMatch {
         
         while (tokenizer.hasMoreTokens()) {
               
-            tokensArray[countTokens++] = tokenizer.nextToken().toLowerCase(); 
+            tokensArray[countTokens++] = normalizeString(tokenizer.nextToken()); 
         }
 
         return tokensArray;
@@ -435,7 +484,9 @@ public final class  FilenameMatch {
     }//getTokens   
     
     /*-------------------------------------------------------------------------
-           
+          Retorna a sequencia de tokens (em um array de tokens) a partir do
+          indice startIndex e com length tokens. Os tokens na sequencia terao
+          tracinho (-) como separadores
     --------------------------------------------------------------------------*/  
     private static String getTokensSequence(
         final String[] tokens,
@@ -541,6 +592,16 @@ public final class  FilenameMatch {
         
     }//getSHA256
     
+    
+    /*-------------------------------------------------------------------------
+     Escreve no terminal apenas quando as saidas foram direcionadas ao arquivo        
+    --------------------------------------------------------------------------*/      
+    private static void writeToConsole(final String s) {
+        
+        if (outputStream != null) CONSOLE.print(s); 
+        
+    }//writeToConsole
+    
     /*-------------------------------------------------------------------------
           Um metodo recursivo que insere na estrutura PATHNAMES_LIST os
           pathnames de todos os arquivos validos no diretorio dir e seus 
@@ -555,8 +616,7 @@ public final class  FilenameMatch {
         */
         File[] fileList = getFileList(dir);
         
-        if (outputStream != null) 
-            CONSOLE.println("Pesquisando em " + dir + " ...");
+        writeToConsole("Pesquisando em " + dir + " ...\n");
         
         for (File file : fileList) {
             
@@ -740,6 +800,17 @@ public final class  FilenameMatch {
         }
         
     }//lookForMatches
+    
+    /*-------------------------------------------------------------------------
+          Retorna uma String contendo o caractere c repetido length vezes   
+    --------------------------------------------------------------------------*/  
+    private static String repeatChar(final char c, final int length) {
+        
+        StringBuilder s = new StringBuilder();
+        for (int i = 0; i < length; i++) s.append(c);
+        return s.toString();
+        
+    }//repeatChar
 
     /*-------------------------------------------------------------------------
                     Metodo que inicia a execucao do programa       
@@ -764,48 +835,35 @@ public final class  FilenameMatch {
             validos serao aqueles que tiverem extensoes pertencentes ao conjunto
             de extensoes validas definidas pelo usuario
             */   
-            if (outputStream != null) CONSOLE.println();
-            getPathnames(searchDir);
+            writeToConsole("\n"); getPathnames(searchDir);
             
+            //Num. de arqs. que serao processados
             int pathnamesListSize = PATHNAMES_LIST.size();
             
-            int steps = 100; //PATHNAME_LIST size > 3000
+            int barLength = 61;
             
-            if (pathnamesListSize < 2) {
-                CONSOLE.println("\nSem arquivos para comparar.");
-                System.exit(0);
-            }else if (pathnamesListSize < 61) {                
-                steps = 1;                
-            }else if (pathnamesListSize < 121) {                
-                steps = 2;                
-            }else if (pathnamesListSize < 241) {                
-                steps = 4;                
-            }else if (pathnamesListSize < 301) {                
-                steps = 5;                
-            }else if (pathnamesListSize < 601) {                
-                steps = 10;                
-            }else if (pathnamesListSize < 1201) {                
-                steps = 20;                
-            }else if (pathnamesListSize < 1501) {                
-                steps = 25;                
-            }else if (pathnamesListSize < 3001) {                
-                steps = 50;                
-            }  
+            int filesPerDot; 
             
-            int rest = pathnamesListSize % steps;
+            /*
+            O loop encontra o maior divisor de pathnamesListSize menor que 
+            61, cujo resto da divisao seja menor que o quociente da divisao.
             
-            int pointsInEachStep = (pathnamesListSize - rest) / steps;
-                 
-            int increment = 100 / steps;
+            Este divisor serah o comprimento da barra de progresso. E cada ponto
+            impresso nesta barra irah representar um numero de arquivos
+            processados que eh igual ao quociente (filesPerDot) dessa divisao
+            */
+            do {
+     
+            } while (
+                (pathnamesListSize % --barLength) >= 
+                (filesPerDot = pathnamesListSize / barLength)
+            );
+                   
+            //Conta o num. de arqs. jah processados
+            int countFiles = 0; 
             
-            int done = 0;
-            
-            int countPoints = 0;
-                  
-            String format = 
-                (rest == 0 || pointsInEachStep == 0) ? " %d%% \n" : " ~ %d%% \n";
-            
-            if (outputStream != null) CONSOLE.println();
+            //Desenha a barra de progresso
+            writeToConsole("\n0%|" + repeatChar(' ', barLength) + "|100%\n   "); 
               
             /*
             Percorre todos os arquivos em PATHNAMES_LIST e compara o nome de 
@@ -813,30 +871,18 @@ public final class  FilenameMatch {
             no diretorio corrente e seus subdiretorios
             */
             for (String absolutePath: PATHNAMES_LIST) {
-                
+                       
                 String[] sourceArray = getTokens(absolutePath);
                 
-                if (outputStream != null) {
-                    
-                    CONSOLE.print('.'); 
-                    
-                    if (
-                            pointsInEachStep != 0 
-                                         && 
-                            ++countPoints % pointsInEachStep == 0
-                    ) {
-                        
-                        done += increment;
-                            
-                        CONSOLE.printf(format, done);   
-                    }                                            
-                } 
+                //A cada countFiles arqs. processados, um ponto eh impresso na 
+                //barra de progresso
+                if (++countFiles % filesPerDot == 0) writeToConsole(".");   
                 
                 printlnMatchesPara = true;
                 lookForMatches(sourceArray, searchDir);
                 
             }//for
-                 
+            
             /*
             Apresenta uma listagem de todas as strings que produziram matches,
             cada uma delas com os respectivos arquivos que possuem esta string
@@ -853,7 +899,6 @@ public final class  FilenameMatch {
                 outputStream.close();
                 System.setOut(CONSOLE);
             }             
-    
              
             System.out.printf(
                 "\n\nFeito! (%,d seg.)\n", (System.currentTimeMillis()-start)/1000
