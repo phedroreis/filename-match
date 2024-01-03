@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+
+  <style>
+    body {
+      padding: 2%;
+    }
+    section {
+      border: solid 1px;
+      margin-bottom: 1%;
+      padding: 1%;
+    }
+    ol {
+      line-height: 29px;
+    }
+    p {
+      text-indent: 1%;
+      line-height:22px;
+    }
+    u {
+      background-color: black;
+      color: white;
+    }
+    img {
+      margin: auto;
+      display: block;
+      border: solid;
+    }
+
+
+  </style>
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manual do FilenameMatch</title>
+
+</head>
+
+<body>
+  <article>
+    <h1>Manual do FilenameMatch</h1>
+    <section>
+      <h2>Finalidade</h2>
+      <p>Localizar arquivos que possuam ocorrências coincidentes de substrings nos nomes destes arquivos.</p>
+    </section>
+    <section>
+      <h2>Uso</h2>
+      <h4>Parâmetros</h4>
+      <p>É possível selecionar os parâmetros:</p>
+      <ol>
+        <li>Diretório de pesquisa</li>
+        <li>Se a pesquisa se estende ou não aos subdiretórios</li>
+        <li>Uma sequência de quantos tokens (palavras) representa ocorrência coincidente</li>
+        <li>O número mínimo de caracteres para ser considerado token</li>
+        <li>O arquivo de saída (ou terminal)</li>
+        <li>Expressão regular para filtrar os arquivos pelos nomes (não se aplica às extensões)</li>
+        <li>Os tipos de arquivos (extensões) que podem ser pesquisados</li>
+      </ol>
+      <p>1 - Só aceita diretórios existentes e onde o usuário tenha direito de leitura. Deixando este campo em branco, a pesquisa terá como raiz o diretório corrente.</p>
+      <p>2 - A pesquisa pode se estender a todos os subdiretórios, recursivamente. A opção default só varre os arquivos do diretório selecionado no campo anterior.</p>
+      <p>3 - Define quantas palavras (tokens) deve ter uma substring que ocorra em dois ou mais arquivos, para que estes arquivos sejam indicados como tendo coincidências em seus nomes. O default para este campo é 3, e o mínimo 1. Se for selecionado valor 1, apenas arquivos com o mesmo nome (mesma sequência de tokens) serão listados como coincidentes. Obs: extensões não são avaliadas como sendo parte do nome do arquivo.</p>
+      <p>4 - Define quantos caracteres deve ter um token. Palavras com número menor de caracteres não serão comparadas. O default para este campo são 2 caracteres e o mínimo 1.</p>
+      <p>5 - A saída padrão é direcionada ao arquivo lista.txt, gravado no diretório corrente. Se este arquivo já existir, será sobrescrito. Digitar "//console" neste campo direciona a saída para o terminal.</p>
+      <p>6 - Uma expressão regular pode ser indicada para selecionar os padrões de nomes de arquivos que podem ser comparados. Essa regex não será aplicada às extensões dos arquivos e nem aos seus caminhos, restringindo-se apenas a filtrar a parte que corresponde ao nome do arquivo. Por default, qualquer nome de arquivo é elegível para ser pesquisado.</p>
+      <p>Sintaxes de regex podem variar ligeiramente dependendo da linguagem de programação usada. O programa utiliza a sintaxe regex da linguagem de programação Java.</p>
+      <p>7 - Seleciona que tipos de arquivos (extensões) podem ser pesquisados. Por default todos os tipos de arquivo são pesquisados.</p>
+
+     <p>O programa tanto pode fazer uma pesquisa exaustiva (encontrando toda e qualquer substring em comum em nomes de arquivos), como pode fazer esta pesquisa em curto circuito, onde apenas a primeira ocorrência coincidente é catalogada.</p>
+     <h4>Modo exaustivo (flag -full)</h4>
+     <p>Se for, por exemplo, selecionado que sequências coincidentes devem ter no mínimo 3 palavras, então serão comparadas todas as possíveis sequências com 3 palavras entre dois nomes de arquivos.</p>
+     <h4>Modo curto-circuito (default)</h4>
+     <p>O loop que realiza todas as comparações possíveis é interrompido assim que uma primeira sequência coincidente é encontrada. (E estes 2 arquivos são listados como coincidentes nessa sequência de tokens)</p>
+
+     <h4>Comparação entre busca exaustiva e curto-circuito</h4>
+     <blockquote>
+      <pre>
+        Algumas estatísticas:
+        
+        Passei uma pasta com muitas subpastas:
+        21.581 Arquivos, 42 SubPastas
+        
+        O tempo de processamento com -full foi de 3.925 seg., em torno de 1 hora e 5 minutos.
+        O tempo de processamento com -short foi de 3.767 seg., em torno de 1 hora e 2 minutos.
+      </pre>
+
+     </blockquote>
+     <p>Na verdade, o exemplo acima não pode ser tomado como uma razão constante entre os dois modos de processamento. A diferença depende dos arquivos pesquisados e pode variar.</p>
+     <p>O que ocorre é que, para encontrar todas as coincidências possíveis entre nomes de arquivos, <b>é necessário</b> que <b>cada</b> arquivo seja comparado com <b>todos</b> os demais.</p>
+     <p>Neste exemplo foram realizadas 21581<sup>2</sup>comparações entre arquivos. Significa que mais de 465 milhões de comparações precisaram ser realizadas.</p>
+     <p>Mas em todas estas comparações, o modo exaustivo só iria diferir do curto-circuito naquelas comparações em que houver pelo menos uma sequência coincidente. Porque quando não há coincidência, em ambos os modos o loop deve prosseguir até o final.</p>
+     <p>Então se, em um conjunto de 21.581 arquivos, mil configuraram como pares coincidentes, significa que em apenas 2 mil destas comparações (dentre mais de 465 milhões que foram feitas), o tempo de comparação foi mais rápido.</p>
+     <p>O que, de fato, daria mesmo diferença insignificante no tempo total de processamento.</p>
+     <p>No entanto essa diferença poderia ser maior se (também pra mil arquivos coincidentes catalogados), cada um, em média, apresentasse coincidências com outros 50. Nesse caso seriam cerca de 100 mil comparações feitas em menor tempo no curto-circuito. O que, ainda comparado a 465 milhões, continuaria sendo um ganho relativamente pequeno.</p>
+     <p>Apesar disso, busca em curto-circuito é modo default. O flag -full ativa a busca exaustiva.</p>
+     <p>Exmeplo: <b><i>java&nbsp;-jar&nbsp;FilenameMatch.jar&nbsp;-full</i></b></p>
+  
+  
+      <h4>Comparando conteúdo de arquivos</h4>
+      <p>Pra cada dois arquivos que derem <i>match</i>, o programa pode comparar seus conteúdos para determinar se estes arquivos são idênticos internamente.</p>
+      <p>Essa comparação não é feita byte a byte, mas calculando um hash para o conteúdo de cada arquivo e comparando estes hashes (dois números de 256 bits).</p>
+      <p>Embora seja possível que dois arquivos diferentes produzam o mesmo valor de hash, no algoritmo SHA-256 a probabilidade disso ocorrer é ínfima. Mas este valor de hash pode ser armazenado em um buffer para que, quando este mesmo arquivo tiver seu conteúdo comparado a outro, seu conteúdo não precise ser lido novamente: o programa apenas irá buscar seu hash sha no buffer.</p>
+      <p>Comparações de conteúdo não são realizadas por default. O flag -sha ativa as comparações de conteúdo.</p>
+      <p>Exmeplo: <b><i>java&nbsp;-jar&nbsp;FilenameMatch.jar&nbsp;-sha</i></b></p>
+    </section>
+
+    <section>
+    <h2>Compilação</h2>
+      <p>Pode ser compilado com <i><b>&nbsp;FilenameMatch.java</b></i>, o que irá gerar todos os .class necessários.</p>
+      <p>Pode ser compilado também pela IDE BlueJ.</p>
+      <p>Para isto basta abrir a pasta src com os fontes, com a opção <u>Abrir Projeto não BlueJ</u>, selecionar com o mouse a classe principal FilenameMatch e clicar em <u>Compilar</u>.</p>
+      <p>Porém, pode ser útil saber que esta IDE se instala com seu próprio JDK, que pode até ser mais recente que o instalado no sistema.</p>
+      <p>Neste caso, o projeto compilado pelo BlueJ não executaria na JVM do sistema.</p>
+      <p>Para saber a versão do JDK do BlueJ, acesse a opção <u>Sobre o BlueJ</u> da IDE.</p>
+      <img src="sobre.png" alt="Sobre o BlueJ">
+      <p>Para saber a versão do java instalada no sistema, use o comando <i><b>java -version</b></i></p>
+    </section>
+
+    <section>
+      <h2>Gerando um arquivo JAR</h2>
+      <p>A forma mais prática de fazer é pela IDE BlueJ, depois dos fontes terem sido compilados pelo próprio Bluej ou com <b><i>javac FilenameMatch.java</i></b></p>
+      <img src="jar.png" alt="Criar Jar">
+      <p>Basta escolher qualquer nome para o arquivo, indicar que FilenameMatch é a classe principal, e depois executar com <b><i>java&nbsp;-jar&nbsp;qualquerNome.jar</i></b></p>
+    </section>
+  </article>
+
+  
+</body>
+
+</html>
