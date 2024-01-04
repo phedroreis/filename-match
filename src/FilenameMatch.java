@@ -32,7 +32,7 @@ public final class  FilenameMatch {
     arquivos a serem testados no diretorio de varredura e de seus subdiretorios
     (caso a opcao de varredura de subdiretorios seja selecionada pelo usuario)
     */
-    private static final List<String> PATHNAMES_LIST = new LinkedList<>();
+    private static final List<Pathname> PATHNAMES_LIST = new LinkedList<>();
     
     /*
     Armazena o conjunto de todas as strings que produziram matches entre 
@@ -262,95 +262,26 @@ public final class  FilenameMatch {
          
     }//readInputs 
     
-    /*-------------------------------------------------------------------------
-           Extrai o nome do arquivo de seu path absoluto, descartando tambem
-           a extensao (se houver)
-    --------------------------------------------------------------------------*/     
-    private static String getFilenameFromPath(final String absolutePath) {
-        
-        String filename = new File(absolutePath).getName(); 
-        
-        int p = filename.lastIndexOf(".");
-        
-        if (p < 1)            
-            return filename;
-        else
-            return filename.substring(0, p);
-        
-    }//getFilenameFromPath    
-    
- /*-------------------------------------------------------------------------
-         Converte uma String em sua versao minuscula e sem acentos. Eh
-         usado para comparar Strings em nomes de arquivos. Assim a String
-         Açúcar serah considerada match com acucar, por exemplo.
-    --------------------------------------------------------------------------*/  
-    private static String normalizeString(final String str) {
-        
-        char[] charArray = str.toLowerCase().toCharArray();
-        
-        for (int i = 0; i < charArray.length; i++) {
-            
-            switch(charArray[i]) {
-                case '\u00e0':
-                case '\u00e1':
-                case '\u00e2':
-                case '\u00e3':
-                    charArray[i] = 'a'; break;
-                case '\u00e8':
-                case '\u00e9':
-                case '\u00ea':
-                case '\u00eb':
-                    charArray[i] = 'e'; break;
-                case '\u00ec':
-                case '\u00ed':
-                case '\u00ee':
-                case '\u00ef':
-                case '\u0129':
-                    charArray[i] = 'i'; break;
-                case '\u00f2':
-                case '\u00f3':
-                case '\u00f4':
-                case '\u00f5':
-                case '\u00f6':                   
-                    charArray[i] = 'o'; break;
-                case '\u00f9':
-                case '\u00fa':
-                case '\u00fb':
-                case '\u00fc':
-                case '\u0169': 
-                    charArray[i] = 'u'; break;
-                case '\u00e7':
-                    charArray[i] ='c';
-            }
-        }//for
-        
-        return new String(charArray);
-        
-    }//normalizeString    
-    
    /*--------------------------------------------------------------------------
        Extrai para um array todos os tokens (palavras) de um nome de arquivo
     --------------------------------------------------------------------------*/
-    private static String[] getTokens(final String absolutePath) {
+    private static String[] getTokens(final Pathname pathname) {
         
         StringTokenizer tokenizer = 
-            new StringTokenizer(
-                getFilenameFromPath(absolutePath), 
-                TOKENS_DELIMITERS
-            );
+            new StringTokenizer(pathname.getName(), TOKENS_DELIMITERS);
         
         String[] tokensArray = new String[tokenizer.countTokens() + 1];
         
         /*
         Guarda o proprio pathname do arquivo na posicao 0 do array
         */
-        tokensArray[0] = absolutePath;
+        tokensArray[0] = pathname.toString();
         
         int countTokens = 1;
         
         while (tokenizer.hasMoreTokens()) {
               
-            tokensArray[countTokens++] = normalizeString(tokenizer.nextToken()); 
+            tokensArray[countTokens++] = tokenizer.nextToken(); 
         }
 
         return tokensArray;
@@ -389,15 +320,15 @@ public final class  FilenameMatch {
            
            System.out.println("\nNomes de arquivos com \"" + match + "\" :\n");
            
-           for (String absolutePath : PATHNAMES_LIST) {
+           for (Pathname pathname : PATHNAMES_LIST) {
                
-               String[] tokens = getTokens(absolutePath);
+               String[] tokens = getTokens(pathname);
                
                String tokensSequence = 
                     getTokensSequence(tokens, 1, tokens.length - 1);
                
                if (tokensSequence.contains(match))
-                   System.out.println(absolutePath);
+                   System.out.println(pathname);
                
             }//for
            
@@ -482,6 +413,9 @@ public final class  FilenameMatch {
     private static void getPathnames(final File dir)
         throws IOException, NoSuchAlgorithmException {
         
+        int pathId = numberOfDirsSearched;
+        Pathname.map(pathId, dir.getAbsolutePath());
+        
         /*
         O metodo retorna apenas arquivos cujas extensoes sao elegiveis para
         pesquisa
@@ -493,14 +427,15 @@ public final class  FilenameMatch {
         for (File file : fileList) {
             
             if (file.isFile()) {
-                
+                        
                 /*Se file eh arquivo, insere seu nome na lista*/                
-                PATHNAMES_LIST.add(file.getAbsolutePath());
+                PATHNAMES_LIST.add(new Pathname(pathId, file));
                 
             } else {
                 
                 /*Se file eh subdiretorio, o metodo se chama recursivamente
-                para continuar a pesquisa neste subdiretorio*/                
+                para continuar a pesquisa neste subdiretorio*/ 
+                numberOfDirsSearched++;
                 getPathnames(file);                
             }            
         }
@@ -527,7 +462,7 @@ public final class  FilenameMatch {
     --------------------------------------------------------------------------*/        
     private static boolean isMatch(
         final String[] sourceArray,
-        final String targetStr
+        final Pathname pathname
     ) {
         
         boolean isMatch = false;
@@ -535,7 +470,7 @@ public final class  FilenameMatch {
         Obtem o array de tokens da String alvo (que eh o nome do arquivo sem
         sua extensao)
         */
-        String[] targetArray = getTokens(targetStr); 
+        String[] targetArray = getTokens(pathname); 
         
         int lastSrcIndex = sourceArray.length - matchLength;
         
@@ -592,16 +527,16 @@ public final class  FilenameMatch {
         
         boolean printlnMatchesPara = true;
         
-        for (String absolutePath: PATHNAMES_LIST) {
+        for (Pathname pathname: PATHNAMES_LIST) {
             
             /*Um arquivo nao pode dar match com ele proprio*/
-            if (sourceArray[0].equals(absolutePath)) continue;
+            if (sourceArray[0].equals(pathname.toString())) continue;
             
             /*
             Se deu match, escreve o pathname do arquivo (armazenado na
             posicao 0 do array sourceArray. 
             */
-            if (isMatch(sourceArray, absolutePath)) {
+            if (isMatch(sourceArray, pathname)) {
 
                 /*
                 O pathname do arquivo associado ao sourceArray soh eh
@@ -626,7 +561,7 @@ public final class  FilenameMatch {
 
                     String sourceSHA = getSHA256(sourceArray[0]);
 
-                    String targetSHA = getSHA256(absolutePath);
+                    String targetSHA = getSHA256(pathname.toString());
 
                     if (sourceSHA.equals(targetSHA)) 
 
@@ -639,7 +574,7 @@ public final class  FilenameMatch {
                 }//if (checkSha)
 
                 //Imprime o nome do arquivo que deu match
-                System.out.println(absolutePath);  
+                System.out.println(pathname);  
 
             }// if (isMatch(sourceArray, absolutePath)) 
             
@@ -728,9 +663,9 @@ public final class  FilenameMatch {
             no diretorio corrente e seus subdiretorios (caso includeSubdirs
             esteja true)
             */
-            for (String absolutePath: PATHNAMES_LIST) {
+            for (Pathname pathname: PATHNAMES_LIST) {
                        
-                String[] sourceArray = getTokens(absolutePath);
+                String[] sourceArray = getTokens(pathname);
                 
                 //A cada countFiles arqs. processados, um ponto eh impresso na 
                 //barra de progresso
@@ -970,7 +905,7 @@ private final static class FileExtensionsParser implements InputParser {
     
 }//classe privada FileExtensionsParser -----------------------------------------
 
-
+  
 private final static class FilesFilter implements FileFilter {
     
     /*--------------------------------------------------------------------------
@@ -987,23 +922,22 @@ private final static class FilesFilter implements FileFilter {
 
         if (isDir && !includeSubdirs) return false; 
 
-        if (isDir) {
-
-          numberOfDirsSearched++; 
-          return true;
-        }
-
-
+        if (isDir) return true;
+        
+     
         //**** Se executou ateh aqui eh arquivo ****
 
 
         String filename = file.getName();
+        
+        int p = filename.lastIndexOf(".");
+        
+        if (p > 0) filename = filename.substring(0, p);        
+        
 
         //Usuario definiu regex mas esta nao casa com nome do arq.
         if (
-            filenameFilterRegex != null
-                    &&
-            !getFilenameFromPath(filename).matches(filenameFilterRegex)
+            filenameFilterRegex != null && !filename.matches(filenameFilterRegex)
         )
             return false;
 
@@ -1033,4 +967,3 @@ private final static class FilesFilter implements FileFilter {
 
     
 }//classe FilenameMatch
-

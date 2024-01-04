@@ -1,6 +1,7 @@
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
 
 /******************************************************************************
  * Classe responsavel por processar entradas de usuario pelo terminal.
@@ -33,20 +34,27 @@ private final BufferedReader inputReader;
  * @param parser Um objeto de uma classe que implemente a interface InputParser
  * e que sera responsavel por validar a entrada
  */
-protected InputReader(
+InputReader(
     final String label,
     final String enterOptionLabel,
     final String defaultOption,
     final InputParser parser
-) {
+) throws UnsupportedEncodingException {
     
     this.label = label;
     this.enterOptionLabel = enterOptionLabel;
     this.defaultOption = defaultOption;
     this.parser = parser;
+ 
+    inputReader = 
+        new BufferedReader(
+            new InputStreamReader(
+                System.in, 
+                System.getProperty("file.encoding")
+            )
+        );
     
-    inputReader = new BufferedReader(new InputStreamReader(System.in));
-    
+  
 }//construtor
 
 /*-----------------------------------------------------------------------------
@@ -58,7 +66,7 @@ protected InputReader(
  * 
  * @return Uma entrada validada
  */
-protected String readInput() throws IOException {
+String readInput() throws IOException {
     
     boolean err;
     String input = null;
@@ -87,6 +95,6 @@ protected String readInput() throws IOException {
     
     return input;
     
-}//readInput         
+}//readInput   
     
 }//classe InputReader
