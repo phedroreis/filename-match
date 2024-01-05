@@ -1,5 +1,7 @@
 import java.io.File;
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 /*******************************************************************************
  * Objetos desta classe representam os dados do pahtname de um arquivo. 
@@ -12,11 +14,15 @@ final class Pathname {
     
     private static final Map<Integer, String> PATHMAP = new HashMap<>(256);
     
+    private final List<PreviousMatchInfo> matchesList;
+    
     private final int pathId;
     
     private final String filename;
     
     private final String name;
+    
+    private String sha256;
     
      /*-------------------------------------------------------------------------
                 Insere o caminho de um diretorio e sua ID no mapa
@@ -90,9 +96,55 @@ final class Pathname {
         if (p < 2)            
             name = normalize(filename.substring(1));
         else
-            name = normalize(filename.substring(1, p));        
+            name = normalize(filename.substring(1, p));
+
+        matchesList = new LinkedList<>(); 
+        
+        sha256 = null;
         
     }//construtor
+    
+    /*-------------------------------------------------------------------------
+            Insere na lista os dados de um match: pathname e se os 2
+            arquivos possuem o mesmo conteudo
+    --------------------------------------------------------------------------*/      
+    void addMatch(final Pathname match, final boolean isSameContent) {
+        
+        PreviousMatchInfo matchInfo = 
+            new PreviousMatchInfo(match, isSameContent);
+        
+        matchesList.add(matchInfo);
+        
+    }//addMatch
+    
+    /*-------------------------------------------------------------------------
+              Retorna a lista dos matches que ja foram catalogados para 
+              este pathname
+    --------------------------------------------------------------------------*/       
+    List<PreviousMatchInfo> getList() {
+        
+        return matchesList;
+        
+    }//getList
+    
+    /*-------------------------------------------------------------------------
+                    Armazena o hash sha 256 deste pathname 
+    --------------------------------------------------------------------------*/       
+    void setSha(final String sha) {
+        
+        sha256 = sha;
+        
+    }//setSha
+    
+    /*-------------------------------------------------------------------------
+                Retorna o hash sha 256 deste pathname.Se for null,
+                o hash nao foi obtido ainda
+    --------------------------------------------------------------------------*/       
+    String getSha() {
+        
+        return sha256;
+        
+    }//getSha
     
     /*-------------------------------------------------------------------------
                     Retorna o nome do arquivo sem a sua extensao

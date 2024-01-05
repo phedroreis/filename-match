@@ -8,11 +8,10 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.regex.PatternSyntaxException;
@@ -21,8 +20,8 @@ import java.util.regex.PatternSyntaxException;
  * Uma aplicacao que encontra e lista nomes de arquivos com substrings 
  * coincidentes.
  * 
- * @since 1.0 2 de janeiro de 2024
- * @version 1.0
+ * @since 2.0 4 de janeiro de 2024
+ * @version 2.0
  * @author Pedro Reis
  ******************************************************************************/
 public final class  FilenameMatch {
@@ -39,14 +38,6 @@ public final class  FilenameMatch {
     arquivos
     */
     private static final Set<String> MATCHES_SET = new LinkedHashSet<>();
-    
-    /*
-    Um cash que armazena hashs sha256 jah calculados como um mapa, associando 
-    cada hash obtido com o pathname do arquivo. Sua funcao eh evitar de ter que 
-    calcular o hash de um arquivo mais de uma vez. Se jah estiver neste mapa, o
-    hash sha eh retornado
-    */
-    private static Map<String,String> shaMap;
     
     /*
     Essa string define os caracteres que serao considerados delimitadores de
@@ -270,14 +261,9 @@ public final class  FilenameMatch {
         StringTokenizer tokenizer = 
             new StringTokenizer(pathname.getName(), TOKENS_DELIMITERS);
         
-        String[] tokensArray = new String[tokenizer.countTokens() + 1];
+        String[] tokensArray = new String[tokenizer.countTokens()];
         
-        /*
-        Guarda o proprio pathname do arquivo na posicao 0 do array
-        */
-        tokensArray[0] = pathname.toString();
-        
-        int countTokens = 1;
+        int countTokens = 0;
         
         while (tokenizer.hasMoreTokens()) {
               
@@ -305,7 +291,7 @@ public final class  FilenameMatch {
         int lastIndex = startIndex + length - 1;
         
         for (int i = startIndex; i <= lastIndex ; i++) 
-            tokensSequence.append(tokens[i]).append((i == lastIndex) ? "" : "-");
+            tokensSequence.append(tokens[i]).append(i == lastIndex ? "" : "-");
         
         return tokensSequence.toString();
         
@@ -325,7 +311,7 @@ public final class  FilenameMatch {
                String[] tokens = getTokens(pathname);
                
                String tokensSequence = 
-                    getTokensSequence(tokens, 1, tokens.length - 1);
+                    getTokensSequence(tokens, 0, tokens.length);
                
                if (tokensSequence.contains(match))
                    System.out.println(pathname);
@@ -339,12 +325,14 @@ public final class  FilenameMatch {
     /*-------------------------------------------------------------------------
                  Retorna o HASH sha256 do conteudo de um arquivo
     --------------------------------------------------------------------------*/      
-    private static String getSHA256(final String absolutePath) 
+    private static String getSHA256(final Pathname pathname) 
         throws IOException, NoSuchAlgorithmException {
         
-        //Procura, primeiramente, o sha256 no cash shaMap para evitar calcular
-        //este hash mais de uma vez para o mesmo arquivo
-        if (shaMap.containsKey(absolutePath)) return shaMap.get(absolutePath);
+        String sourceSha256 = pathname.getSha();
+        
+        if (sourceSha256 != null) return sourceSha256;
+        
+        String absolutePath = pathname.toString();        
         
         File file = new File(absolutePath);
         
@@ -356,7 +344,11 @@ public final class  FilenameMatch {
         if (file.length() < 100000000) {
             
             sha256 =
-                messageDigest.digest(Files.readAllBytes(Paths.get(absolutePath)));
+                messageDigest.digest(
+                    Files.readAllBytes(
+                        Paths.get(absolutePath)
+                    )
+                );
             
         }
         else {/*Maior que 100MB le blocos de 80MB de cada vez*/
@@ -384,15 +376,16 @@ public final class  FilenameMatch {
         */
         StringBuilder hexString = new StringBuilder();
         
-        for (byte b : sha256) hexString.append(String.format("%02X", b));    
+        for (byte b : sha256) hexString.append(String.format("%02X", b));
+        
+        sourceSha256 = hexString.toString();
         
         /*
-        Insere o pathname do arquivo e seu hash no cash shaMap para nao ter
-        que calcula-lo novamente
+        Salva o hash deste pathname pra nao ter que recalcula-lo
         */
-        shaMap.put(absolutePath, hexString.toString());
+        pathname.setSha(sourceSha256);
         
-        return hexString.toString();
+        return sourceSha256;
         
     }//getSHA256    
     
@@ -438,22 +431,8 @@ public final class  FilenameMatch {
                 numberOfDirsSearched++;
                 getPathnames(file);                
             }            
-        }
-        
-        /*
-        Ao final do loop conhecemos todos os arquivos e diretorios que serao
-        pesquisados. Podemos criar um cash (na forma de um mapa) para armazenar
-        todos os hashs que forem obtidos de arquivos. A capacidade inicial deste 
-        mapa eh estimada em 10% do numero total dos arquivos que serao
-        pesquisados, jah que nem todos terao matches e portanto nem todos terao 
-        que ter seus hashs obtidos
-        */
-        int initialCapacity = fileList.length / 10 ; 
-        
-        if (initialCapacity < 8) initialCapacity = fileList.length;
-        
-        shaMap = new HashMap<>(initialCapacity);
-        
+        }        
+       
     }//getPathnames
     
     /*-------------------------------------------------------------------------
@@ -461,24 +440,22 @@ public final class  FilenameMatch {
           array de tokens) e a string target        
     --------------------------------------------------------------------------*/        
     private static boolean isMatch(
-        final String[] sourceArray,
-        final Pathname pathname
+        final Pathname sourcePathname,
+        final Pathname targetPathname
     ) {
         
         boolean isMatch = false;
-        /*
-        Obtem o array de tokens da String alvo (que eh o nome do arquivo sem
-        sua extensao)
-        */
-        String[] targetArray = getTokens(pathname); 
+
+        String[] sourceArray = getTokens(sourcePathname);
+        String[] targetArray = getTokens(targetPathname); 
         
         int lastSrcIndex = sourceArray.length - matchLength;
         
         int lastTrgtIndex = targetArray.length - matchLength;
         
-        for (int srcIndex = 1; srcIndex <= lastSrcIndex; srcIndex++) {
+        for (int srcIndex = 0; srcIndex <= lastSrcIndex; srcIndex++) {
                     
-            for (int trgtIndex = 1; trgtIndex <= lastTrgtIndex; trgtIndex++) {
+            for (int trgtIndex = 0; trgtIndex <= lastTrgtIndex; trgtIndex++) {
                 
                 int matchCounter = 0;
                 
@@ -521,35 +498,75 @@ public final class  FilenameMatch {
     /*-------------------------------------------------------------------------
         Recebe o array com os tokens de um nome de arquivo e compara com os
         nomes de todos os arquivos localizados
-    --------------------------------------------------------------------------*/    
-    private static void lookForMatches(final String[] sourceArray) 
+    --------------------------------------------------------------------------*/  
+    private static void lookForMatches(
+        final Pathname sourcePathname,
+        final Iterator<Pathname> iterator
+    ) 
         throws IOException, NoSuchAlgorithmException {
         
-        boolean printlnMatchesPara = true;
+        String sourceSHA = null;
         
-        for (Pathname pathname: PATHNAMES_LIST) {
+        List<PreviousMatchInfo> matchesList = sourcePathname.getList();
+        
+        for (PreviousMatchInfo matchInfo: matchesList) {
             
-            /*Um arquivo nao pode dar match com ele proprio*/
-            if (sourceArray[0].equals(pathname.toString())) continue;
+            if (sourceSHA == null) {
+
+                System.out.println(
+                    "\nMatches para \"" + sourcePathname + "\" : \n"
+                );
+                
+                if (checkSha) 
+                    sourceSHA = getSHA256(sourcePathname);
+                else
+                    sourceSHA = "#";
+
+            }//if (printlnMatchesPara)
             
+            if (checkSha) { 
+                
+                if (matchInfo.isSameContent()) 
+                
+                    System.out.print(" [=] ");
+
+                else
+
+                    System.out.print("[<>] ");
+            } 
+            else
+                System.out.print(" [?] ");
+            
+            System.out.println(matchInfo.getPathname());            
+            
+        }
+        
+        while (iterator.hasNext()) {
+            
+            Pathname targetPathname = iterator.next();
+              
             /*
             Se deu match, escreve o pathname do arquivo (armazenado na
             posicao 0 do array sourceArray. 
             */
-            if (isMatch(sourceArray, pathname)) {
-
+            if (isMatch(sourcePathname, targetPathname)) {
+                
                 /*
                 O pathname do arquivo associado ao sourceArray soh eh
                 escrito na 1a vez que der match. 
                 */
-                if (printlnMatchesPara) {
+                if (sourceSHA == null) {
 
                     System.out.println(
-                        "\nMatches para \"" + sourceArray[0] + "\" : \n"
+                        "\nMatches para \"" + sourcePathname + "\" : \n"
                     );
-
-                    printlnMatchesPara = false;
-
+                    
+                if (checkSha) 
+                    sourceSHA = getSHA256(sourcePathname);
+                else
+                    sourceSHA = "#";
+                    
+   
                 }//if (printlnMatchesPara)
 
                 /*
@@ -557,13 +574,14 @@ public final class  FilenameMatch {
                 conteudos identicos. Se checkSha foi selecionado false pelo 
                 usuario, este teste eh pulado
                 */
+                boolean isSameContent = false;
                 if (checkSha) {  
-
-                    String sourceSHA = getSHA256(sourceArray[0]);
-
-                    String targetSHA = getSHA256(pathname.toString());
-
-                    if (sourceSHA.equals(targetSHA)) 
+                    
+                    String targetSHA = getSHA256(targetPathname);
+                    
+                    isSameContent = (sourceSHA.equals(targetSHA)); 
+                    
+                    if (isSameContent)
 
                         System.out.print(" [=] ");
 
@@ -572,9 +590,13 @@ public final class  FilenameMatch {
                         System.out.print("[<>] ");   
 
                 }//if (checkSha)
+                else
+                    System.out.print(" [?] ");               
+                
+                targetPathname.addMatch(sourcePathname, isSameContent);               
 
                 //Imprime o nome do arquivo que deu match
-                System.out.println(pathname);  
+                System.out.println(targetPathname);  
 
             }// if (isMatch(sourceArray, absolutePath)) 
             
@@ -594,7 +616,7 @@ public final class  FilenameMatch {
                 if (arg.equals("-sha")) checkSha = true;
                 if (arg.equals("-full")) shortSearch = false;
             }
-      
+            
             //Le as entradas do usuario
             readInputs();
             
@@ -656,6 +678,8 @@ public final class  FilenameMatch {
             
             //Imprime a barra de progresso
             writeToConsole("\n0%|" + repeatChar(' ', barLength) + "|100%\n   "); 
+            
+            Iterator<Pathname> i; 
               
             /*
             Percorre todos os arquivos em PATHNAMES_LIST e compara o nome de 
@@ -664,14 +688,14 @@ public final class  FilenameMatch {
             esteja true)
             */
             for (Pathname pathname: PATHNAMES_LIST) {
-                       
-                String[] sourceArray = getTokens(pathname);
-                
+                 
                 //A cada countFiles arqs. processados, um ponto eh impresso na 
                 //barra de progresso
-                if (++countFiles % filesPerDot == 0) writeToConsole(".");   
+                if (++countFiles % filesPerDot == 0) writeToConsole(".");  
                 
-                lookForMatches(sourceArray);
+                i = PATHNAMES_LIST.listIterator(countFiles);
+                
+                lookForMatches(pathname, i);
                 
             }//for
             
