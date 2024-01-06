@@ -977,16 +977,14 @@ private final static class FilesFilter implements FileFilter {
 
 
         String filename = file.getName();
-        
+        String name;
+          
         int p = filename.lastIndexOf(".");
         
-        if (p > 0) filename = filename.substring(0, p);        
+        if (p > 0) name = filename.substring(0, p); else name = filename;
         
-
         //Usuario definiu regex mas esta nao casa com nome do arq.
-        if (
-            filenameFilterRegex != null && !filename.matches(filenameFilterRegex)
-        )
+        if (filenameFilterRegex != null && !name.matches(filenameFilterRegex))
             return false;
 
 
@@ -998,12 +996,16 @@ private final static class FilesFilter implements FileFilter {
 
 
         //**** Ainda precisa verificar a extensao do arq. ****
-
-
-        int i = filename.lastIndexOf('.'); 
-        if (i == 0) return false;//nao eh extensao, eh nome do arq.
-
-        String ext = filename.substring(i + 1) + " ";  
+        
+        String ext;
+        
+        if ( p > 0 && p < (filename.length() - 1) )
+            
+            ext = filename.substring(p + 1); 
+        
+        else 
+            
+            return false;
 
         //Retorna se a ext. do arq. pertence ou nao ao conj. de 
         //extensoes selecionado

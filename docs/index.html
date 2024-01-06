@@ -88,21 +88,47 @@
      </blockquote>
      <p>Na verdade, o exemplo acima não pode ser tomado como uma razão constante entre os dois modos de processamento. A diferença depende dos arquivos pesquisados e pode variar.</p>
      <p>O que ocorre é que, para encontrar todas as coincidências possíveis entre nomes de arquivos, <b>é necessário</b> que <b>cada</b> arquivo seja comparado com <b>todos</b> os demais.</p>
-     <p>Neste exemplo foram realizadas 21581<sup>2</sup>comparações entre arquivos. Significa que mais de 465 milhões de comparações precisaram ser realizadas.</p>
+     <p>Portanto, para N arquivos, são realizadas (N<sup>2</sup> - N) / 2 comparações entre nomes de arquivos.</p>
+     <p>Para o exemplo acima foram realizadas 21581<sup>2</sup> comparações entre arquivos porque rodou em uma versão anterior. Significa que mais de 465 milhões de comparações precisaram ser realizadas.</p>
+     <p>(Na atual versão seriam feitas 232.858.990 comparações)</p>
      <p>Mas em todas estas comparações, o modo exaustivo só iria diferir do curto-circuito naquelas comparações em que houver pelo menos uma sequência coincidente. Porque quando não há coincidência, em ambos os modos o loop deve prosseguir até o final.</p>
      <p>Então se, em um conjunto de 21.581 arquivos, mil configuraram como pares coincidentes, significa que em apenas 2 mil destas comparações (dentre mais de 465 milhões que foram feitas), o tempo de comparação foi mais rápido.</p>
      <p>O que, de fato, daria mesmo diferença insignificante no tempo total de processamento.</p>
      <p>No entanto essa diferença poderia ser maior se (também pra mil arquivos coincidentes catalogados), cada um, em média, apresentasse coincidências com outros 50. Nesse caso seriam cerca de 100 mil comparações feitas em menor tempo no curto-circuito. O que, ainda comparado a 465 milhões, continuaria sendo um ganho relativamente pequeno.</p>
      <p>Apesar disso, busca em curto-circuito é modo default. O flag -full ativa a busca exaustiva.</p>
      <p>Exmeplo: <b><i>java&nbsp;-jar&nbsp;FilenameMatch.jar&nbsp;-full</i></b></p>
-  
-  
+    
       <h4>Comparando conteúdo de arquivos</h4>
       <p>Pra cada dois arquivos que derem <i>match</i>, o programa pode comparar seus conteúdos para determinar se estes arquivos são idênticos internamente.</p>
       <p>Essa comparação não é feita byte a byte, mas calculando um hash para o conteúdo de cada arquivo e comparando estes hashes (dois números de 256 bits).</p>
       <p>Embora seja possível que dois arquivos diferentes produzam o mesmo valor de hash, no algoritmo SHA-256 a probabilidade disso ocorrer é ínfima. Mas este valor de hash pode ser armazenado em um buffer para que, quando este mesmo arquivo tiver seu conteúdo comparado a outro, seu conteúdo não precise ser lido novamente: o programa apenas irá buscar seu hash sha no buffer.</p>
       <p>Comparações de conteúdo não são realizadas por default. O flag -sha ativa as comparações de conteúdo.</p>
       <p>Exmeplo: <b><i>java&nbsp;-jar&nbsp;FilenameMatch.jar&nbsp;-sha</i></b></p>
+
+      <h4>Selecionando o encoding do terminal</h4>
+      <p>O programa não configura a página de código de um terminal Windows e nem o encoding de um terminal Linux/MacOS/etc...</p>
+      <p>Mas é possível selecionar o encoding com o qual ele irá codificar os caracteres que envia para o terminal e com o qual irá decodificar os caracteres que lê do terminal.</p>
+      <p>Este charset, claro, deve ser o mesmo charset do terminal. Se possível.</p>
+      <p>Chamando o programa com o flag -cs=TIPO_DO_ENCODING o usuário determina o charset que será usado. (Apenas na comunicação com o terminal, para arquivos a gravação será sempre no padrão UTF-8)</p>
+      <p>As opções disponíveis são:</p>
+      <ul>
+        <li>iso-8859-1 (compatível com CP ANSI 1252)</li>
+        <li>us-ascii</li>
+        <li>utf16</li>
+        <li>utf_16be</li>
+        <li>utf_16le</li>
+        <li>utf8</li>
+      </ul>
+
+      <p>Exemplo: <b><i>java&nbsp;-jar&nbsp;FilenameMatch.jar&nbsp;-cs=us-ascii</i></b></p>
+      <p>UTF-8 é o encoding default do programa, mas isso pode ser atterado editando-se a linha 85 do fonte FilenameMatch.java.</p>
+      <p><code><pre>private static String consoleCharset = "utf8";  </pre></code></p>
+
+      <p>Todos os flags podem ser usados em conjunto ou em separado. E em qualquer ordem.</p>
+      <p>Exemplos:</p>
+      <p><b><i>java&nbsp;-jar&nbsp;FilenameMatch.jar&nbsp;-sha</i></b></p>
+      <p><b><i>java&nbsp;-jar&nbsp;FilenameMatch.jar&nbsp;-full -sha</i></b></p>
+      <p><b><i>java&nbsp;-jar&nbsp;FilenameMatch.jar&nbsp;-cs=utf16 -sha -full</i></b></p>
     </section>
 
     <section>
