@@ -13,8 +13,15 @@ final class PreviousMatchInfo {
     private final boolean isSameContent;
     
    /*-------------------------------------------------------------------------
-                                    Construtor
-    --------------------------------------------------------------------------*/      
+                                    
+    --------------------------------------------------------------------------*/ 
+    /**
+     * Construtor.
+     * 
+     * @param pathname O pathname do arq. que deu match.
+     * 
+     * @param isSameContent Se ambos tinham o mesmo conteudo.
+     */
     PreviousMatchInfo(final Pathname pathname, final boolean isSameContent) {
         
         this.pathname = pathname;
@@ -23,8 +30,13 @@ final class PreviousMatchInfo {
     }//construtor
     
     /*-------------------------------------------------------------------------
-                Retorna o path absoluto do arquivo que deu este match
-    --------------------------------------------------------------------------*/       
+                
+    --------------------------------------------------------------------------*/  
+    /**
+     * Retorna o path absoluto do arquivo que deu este match.
+     * 
+     * @return o path absoluto do arquivo que deu este match.
+     */
     Pathname getPathname() {
         
         return pathname;
@@ -32,8 +44,13 @@ final class PreviousMatchInfo {
     }//getPathname
     
     /*-------------------------------------------------------------------------
-                Retorna se os dois arquivos tem o mesmo conteudo
-    --------------------------------------------------------------------------*/       
+                
+    --------------------------------------------------------------------------*/ 
+    /**
+     * Retorna se os dois arquivos tem o mesmo conteudo.
+     * 
+     * @return Se os dois arquivos tem o mesmo conteudo.
+     */
     boolean isSameContent() {
         
         return isSameContent;

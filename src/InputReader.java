@@ -1,6 +1,7 @@
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
 
 /******************************************************************************
@@ -12,17 +13,39 @@ import java.io.UnsupportedEncodingException;
  ******************************************************************************/
 final class InputReader {
     
-private final String label;
-private final String enterOptionLabel;
-private final String defaultOption;
-private final InputParser parser;
+private String label;
+private String enterOptionLabel;
+private String defaultOption;
+private InputParser parser;
 private final BufferedReader inputReader;
+private final PrintStream console;
 
 /*-----------------------------------------------------------------------------
 
 ------------------------------------------------------------------------------*/
 /**
- * Construtor da classe.
+ * Construtor.
+ * 
+ * @param console Um printStream para escrever no terminal
+ * 
+ * @param charset O encoding que console ira usar para ler dados
+ * 
+ * @throws UnsupportedEncodingException Se charset nao for reconhecido
+ */
+InputReader(final PrintStream console, final String charset)
+    throws UnsupportedEncodingException {
+    
+    this.console = console;
+    
+    inputReader = new BufferedReader(new InputStreamReader(System.in, charset));
+    
+}//construtor
+
+/*-----------------------------------------------------------------------------
+
+------------------------------------------------------------------------------*/
+/**
+ * Configura o prompt de entrada de dados.
  * 
  * @param label Especifica a entrada
  * 
@@ -34,28 +57,19 @@ private final BufferedReader inputReader;
  * @param parser Um objeto de uma classe que implemente a interface InputParser
  * e que sera responsavel por validar a entrada
  */
-InputReader(
+void setPrompt(
     final String label,
     final String enterOptionLabel,
     final String defaultOption,
     final InputParser parser
-) throws UnsupportedEncodingException {
+){
     
     this.label = label;
     this.enterOptionLabel = enterOptionLabel;
     this.defaultOption = defaultOption;
-    this.parser = parser;
- 
-    inputReader = 
-        new BufferedReader(
-            new InputStreamReader(
-                System.in, 
-                System.getProperty("file.encoding")
-            )
-        );
-    
+    this.parser = parser;      
   
-}//construtor
+}//setPrompt
 
 /*-----------------------------------------------------------------------------
 
@@ -74,8 +88,8 @@ String readInput() throws IOException {
     do {
         err = false;
         
-        System.out.println('\n' + label + ':');
-        System.out.print("[ENTER = " + enterOptionLabel + "] >");
+        console.println('\n' + label + ':');
+        console.print("[ENTER = " + enterOptionLabel + "] >");
         
         try {           
       
@@ -87,7 +101,7 @@ String readInput() throws IOException {
         }
         catch (IllegalArgumentException e) {
             
-            System.out.println("\n" + e.getMessage());
+            console.println("\n" + e.getMessage());
             err = true;             
         }
         

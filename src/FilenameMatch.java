@@ -9,11 +9,11 @@ import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Iterator;
-import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.StringTokenizer;
+import java.util.TreeSet;
 import java.util.regex.PatternSyntaxException;
 
 /*******************************************************************************
@@ -29,15 +29,17 @@ public final class  FilenameMatch {
     /*
     Essa estrutura de dados irah armazenar em uma lista todos os pathnames dos 
     arquivos a serem testados no diretorio de varredura e de seus subdiretorios
-    (caso a opcao de varredura de subdiretorios seja selecionada pelo usuario)
+    (caso a opcao de varredura de subdiretorios seja selecionada pelo usuario).
+    Um objeto Pathname encapsula dados e metodos para o devido processamento de
+    um arquivo.
     */
     private static final List<Pathname> PATHNAMES_LIST = new LinkedList<>();
     
     /*
-    Armazena o conjunto de todas as strings que produziram matches entre 
-    arquivos
+    Armazena o conjunto de todas as sequencias de tokens que produziram matches 
+    entre arquivos
     */
-    private static final Set<String> MATCHES_SET = new LinkedHashSet<>();
+    private static final Set<String> MATCHES_SET = new TreeSet<>();
     
     /*
     Essa string define os caracteres que serao considerados delimitadores de
@@ -47,11 +49,13 @@ public final class  FilenameMatch {
    
     /*
     Uma String com as extensoes dos tipos de arquivos que serao pesquisados
+    default : null
     */
     private static String fileExtensions;
     
     /*
     O diretorio a partir do qual serah feita a varredura
+    default : diretorio corrente
     */
     private static File rootSearchDir;
     
@@ -62,22 +66,39 @@ public final class  FilenameMatch {
      
     /*
     Fluxo para onde redirecionar a saida padrao de texto
+    default : arquivo nomeado OUTPUT_FILENAME no dir. corrente
     */
     private static PrintStream outputStream;
+    
+    /*
+    Encoding para entrada e saida no terminal. Nao afeta saida para arquivo
+    que codifica no padrao utf8
+    
+    encodings suportados:
+    iso-8859-1
+    us-ascii
+    utf16
+    utf_16be
+    utf_16le
+    utf8
+    */
+    private static String consoleCharset = "utf8";    
     
     /*
     Escreve no terminal mesmo quando o objeto de saida padrao tiver sido 
     redirecionado para um arquivo
     */
-    private static final PrintStream CONSOLE = System.out;
-   
+    private static PrintStream console;
+     
     /*
     Define o numero minimo de tokens para match entre dois nomes de arquivos
+    default : 3
     */
     private static int matchLength;
     
     /*
     Define o comprimento minimo para tokens (em caracteres)
+    default : 2
     */
     private static int minimumTokenLength;
      
@@ -98,16 +119,18 @@ public final class  FilenameMatch {
     /*
     Deternina se os subdiretorios do diretorio de varredura tambem serao 
     pesquisados
+    default : false
     */
     private static boolean includeSubdirs;
     
     /*
-    O num. de diretorios pesquisados
+    Contador para o num. de diretorios pesquisados
     */
     private static int numberOfDirsSearched = 1;
     
     /*
     Uma regex para filtrar nomes de arquivos
+    default : null
     */
     private static String filenameFilterRegex;
         
@@ -128,11 +151,12 @@ public final class  FilenameMatch {
     @SuppressWarnings("null")
     private static void readInputs() throws IOException {
         
-        InputReader inputReader;//Objeto para ler as entradas        
+        //Objeto para ler as entradas        
+        InputReader  inputReader = new InputReader(console, consoleCharset);
         
         //O diretorio a partir do qual iniciar a varredura----------------------
         
-        inputReader = new InputReader(
+        inputReader.setPrompt(
             "Diret\u00f3rio de varredura",
             "Diret\u00f3rio corrente",
             ".",
@@ -146,7 +170,7 @@ public final class  FilenameMatch {
         
         //Define se a pesquisa deve se extender aos subdiretorios---------------
         
-        inputReader = new InputReader(
+        inputReader.setPrompt(
             "Pesquisar subdiret\u00f3rios? (S/n)",
             "N\u00e3o",
             "n",
@@ -160,7 +184,7 @@ public final class  FilenameMatch {
         
         //O numero minimo de palavras para ser considerado match----------------
         
-        inputReader = new InputReader(
+        inputReader.setPrompt(
             "M\u00ednimo de palavras para dar match",
             "3",
             "3",
@@ -174,7 +198,7 @@ public final class  FilenameMatch {
         
         //O numero minimo de caracteres para uma palavra ser token--------------
         
-        inputReader = new InputReader(
+        inputReader.setPrompt(
             "M\u00ednimo de caracteres que deve ter um token",
             "2",
             "2",
@@ -188,25 +212,45 @@ public final class  FilenameMatch {
         
         //Define o arquivo de saida---------------------------------------------
         
-        inputReader = new InputReader(
+        inputReader.setPrompt(
             "Arquivo de sa\u00edda (pode incluir caminho relativo ou absoluto)",
             OUTPUT_FILENAME + " , //console = Sa\u00edda no terminal",
             OUTPUT_FILENAME,
-            new OutputFileParser()
+            new OutputFilenameParser()
         );
-        
-        File outputFile = null;
-        
+           
         String outputFilename = inputReader.readInput();
         
-        if (outputFilename != null) outputFile = new File(outputFilename);
+        if (outputFilename != null) {
+            
+            File outputFile = new File(outputFilename);     
+ 
+            
+            //Eh criado um objeto de fluxo que envia a saida padrao para 
+            //o outputFile 
+            outputStream = 
+                new PrintStream(
+                    new FileOutputStream(outputFile),
+                    false, 
+                    "utf8"
+                );
+            
+            System.setOut(outputStream); 
+       
+        }
+        else {
+       //Senao outputStream = null para sinalizar para o programa que a saida
+       //padrao esta sendo enviada para o terminal
+            outputStream = null; 
+            System.setOut(console);
+        }
         
         //----------------------------------------------------------------------
         
         
         //Define uma expressao regular para filtrar nomes de arquivos-----------
         
-        inputReader = new InputReader(
+        inputReader.setPrompt(
             "Defina uma regex para filtrar nomes de arquivos",
             "Qualquer arquivo",
              null,
@@ -220,7 +264,7 @@ public final class  FilenameMatch {
         
         //Define que tipos de arquivos podem ser pesquisados--------------------
         
-        inputReader = new InputReader(
+        inputReader.setPrompt(
             "Extens\u00f5es de arquivos a serem pesquisados " +
              "(sem ponto e separadas por espa\u00e7o)",
             "Qualquer arquivo",
@@ -233,24 +277,6 @@ public final class  FilenameMatch {
         if (fileExtensions != null) 
             fileExtensions = fileExtensions.toLowerCase() + " ";
         
-        //----------------------------------------------------------------------
-        
-           
-        //Se foi selecionado um outputFile, entao as saidas sao redirecionadas a
-        //este arquivo
-        if (outputFile != null) {
-            
-            //Eh criado um objeto de fluxo que envia a saida padaro para 
-            //o outputFile
-            outputStream = new PrintStream(new FileOutputStream(outputFile));
-            System.setOut(outputStream); 
-      
-        }
-        else
-       //Senao outputStream = null para sinalizar para o programa que a saida
-       //padrao esta sendo enviada para o terminal
-            outputStream = null;
-         
     }//readInputs 
     
    /*--------------------------------------------------------------------------
@@ -278,7 +304,7 @@ public final class  FilenameMatch {
           Retorna a sequencia de tokens (em um array de tokens) a partir do
           indice startIndex e de comprimento length, ou seja, com length
           tokens. Os tokens na sequencia retornada terao o tracinho (-) como
-          separadores
+          separador
     --------------------------------------------------------------------------*/  
     private static String getTokensSequence(
         final String[] tokens,
@@ -394,7 +420,7 @@ public final class  FilenameMatch {
     --------------------------------------------------------------------------*/      
     private static void writeToConsole(final String s) {
         
-        if (outputStream != null) CONSOLE.print(s); 
+        if (outputStream != null) console.print(s); 
         
     }//writeToConsole
     
@@ -436,8 +462,7 @@ public final class  FilenameMatch {
     }//getPathnames
     
     /*-------------------------------------------------------------------------
-          Verifica se ha match entre a string source (jah convertida para
-          array de tokens) e a string target        
+                    Verifica se ha match entre dois Pathnames     
     --------------------------------------------------------------------------*/        
     private static boolean isMatch(
         final Pathname sourcePathname,
@@ -496,8 +521,8 @@ public final class  FilenameMatch {
     }//isMatch
         
     /*-------------------------------------------------------------------------
-        Recebe o array com os tokens de um nome de arquivo e compara com os
-        nomes de todos os arquivos localizados
+        Recebe um Pathname e o compara com os Pathnames que sao seus 
+        sucessores em PATHNAMES_LIST
     --------------------------------------------------------------------------*/  
     private static void lookForMatches(
         final Pathname sourcePathname,
@@ -522,7 +547,7 @@ public final class  FilenameMatch {
                 else
                     sourceSHA = "#";
 
-            }//if (printlnMatchesPara)
+            }//if (sourceSHA == null)
             
             if (checkSha) { 
                 
@@ -546,14 +571,13 @@ public final class  FilenameMatch {
             Pathname targetPathname = iterator.next();
               
             /*
-            Se deu match, escreve o pathname do arquivo (armazenado na
-            posicao 0 do array sourceArray. 
+            Se deu match, escreve o pathname do arquivo 
             */
             if (isMatch(sourcePathname, targetPathname)) {
                 
                 /*
-                O pathname do arquivo associado ao sourceArray soh eh
-                escrito na 1a vez que der match. 
+                O pathname de sourcePathname soh eh escrito na 1a vez que der 
+                match
                 */
                 if (sourceSHA == null) {
 
@@ -567,7 +591,7 @@ public final class  FilenameMatch {
                     sourceSHA = "#";
                     
    
-                }//if (printlnMatchesPara)
+                }//if (sourceSHA == null)
 
                 /*
                 Verifica se os dois arquivos que deram match possuem tb
@@ -598,7 +622,7 @@ public final class  FilenameMatch {
                 //Imprime o nome do arquivo que deu match
                 System.out.println(targetPathname);  
 
-            }// if (isMatch(sourceArray, absolutePath)) 
+            }//if 
             
         }//for
         
@@ -607,7 +631,7 @@ public final class  FilenameMatch {
     /*-------------------------------------------------------------------------
                     Metodo que inicia a execucao do programa       
     --------------------------------------------------------------------------*/
-    public static void main(String[] args) throws NoSuchAlgorithmException {
+    public static void main(String[] args) {
           
        try {
             
@@ -615,13 +639,16 @@ public final class  FilenameMatch {
                 
                 if (arg.equals("-sha")) checkSha = true;
                 if (arg.equals("-full")) shortSearch = false;
+                if (arg.startsWith("-cs=")) consoleCharset = arg.substring(4);
             }
+            
+            console = new PrintStream(System.out, true, consoleCharset);
             
             //Le as entradas do usuario
             readInputs();
             
             //Marca a hora (em milisegundos) do inicio da execucao do processo
-            long start = System.currentTimeMillis();
+            long startTime = System.currentTimeMillis();
             
             /*Obtem uma lista (PATHNAMES_LIST) com os nomes de todos os arquivos 
             validos no diretorio corrente e nos seus subdiretorios (caso esta
@@ -679,7 +706,7 @@ public final class  FilenameMatch {
             //Imprime a barra de progresso
             writeToConsole("\n0%|" + repeatChar(' ', barLength) + "|100%\n   "); 
             
-            Iterator<Pathname> i; 
+            Iterator<Pathname> iterator; 
               
             /*
             Percorre todos os arquivos em PATHNAMES_LIST e compara o nome de 
@@ -693,9 +720,9 @@ public final class  FilenameMatch {
                 //barra de progresso
                 if (++countFiles % filesPerDot == 0) writeToConsole(".");  
                 
-                i = PATHNAMES_LIST.listIterator(countFiles);
+                iterator = PATHNAMES_LIST.listIterator(countFiles);
                 
-                lookForMatches(pathname, i);
+                lookForMatches(pathname, iterator);
                 
             }//for
             
@@ -710,27 +737,24 @@ public final class  FilenameMatch {
             Se as saidas foram redirecionadas para um arquivo, este arquivo 
             agora serah fechado
             */
-            if (outputStream != null) {
+            if (outputStream != null) outputStream.close();
                 
-                outputStream.close();
-                System.setOut(CONSOLE);
-            } 
-
-            int seconds = (int)(System.currentTimeMillis() - start) / 1000;
+            int elapsedTime = (int)(System.currentTimeMillis() - startTime);
+            int seconds = elapsedTime / 1000;
+            int mili = elapsedTime % 1000;
             int hours = seconds / 3600;
             seconds = seconds % 3600;  
             int minutes = seconds / 60;
             seconds = seconds % 60;
-             
-            System.out.printf(
-                "\n\nFeito! [%dh:%dm:%ds]\n", 
-                hours, minutes, seconds
+
+            console.printf(
+                "\n\nFeito! [%dh:%dm:%ds:%dms]\n", 
+                hours, minutes, seconds, mili
             );
         }
-        catch(IOException e) {
+        catch(NoSuchAlgorithmException | IOException e) {
             
-            System.err.println("\n" + e.getMessage());
-            System.exit(0);
+            System.err.println("\n" + e);
         }
       
     }//main
@@ -851,7 +875,7 @@ private final static class MinimumTokenLengthParser implements InputParser {
 
 
 
-private final static class OutputFileParser implements InputParser {
+private final static class OutputFilenameParser implements InputParser {
     
     @Override
     public String parse(final String input) throws IllegalArgumentException {

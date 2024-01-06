@@ -12,21 +12,48 @@ import java.util.Map;
  ******************************************************************************/
 final class Pathname {
     
+    /*
+    Um mapa associando todos os paths de todos os diretorios pesquisados a suas
+    IDs. Podendo estes paths serem recuperados a partir destas IDs.
+    */
     private static final Map<Integer, String> PATHMAP = new HashMap<>(256);
     
+    /*
+    A lista dos matches que outros arquivos deram com este.
+    */
     private final List<PreviousMatchInfo> matchesList;
     
+    /*
+    O ID do pathname deste objeto Pathname (que representa um arquivo a ser 
+    comparado)
+    */
     private final int pathId;
     
+    /*
+    O nome do arquivo com extensao e precedido de barra separadora de diretorio
+    */
     private final String filename;
     
+    /*
+    O nome do arquivo sem a extensao
+    */
     private final String name;
     
+    /*
+    O hash sha256 do conteudo deste arquivo
+    */
     private String sha256;
     
      /*-------------------------------------------------------------------------
-                Insere o caminho de um diretorio e sua ID no mapa
+               
     --------------------------------------------------------------------------*/   
+    /**
+     * Insere o caminho de um diretorio e sua ID no mapa.
+     * 
+     * @param pathId A ID do caminho absoluto de um diretorio pesquisado.
+     * 
+     * @param path O caminho absoluto de um diretorio pesquisado.
+     */
     static void map(final int pathId, final String path) {
         
         PATHMAP.put(pathId, path);
@@ -84,12 +111,20 @@ final class Pathname {
   
     /*-------------------------------------------------------------------------
                               Construtor da classe
-    --------------------------------------------------------------------------*/      
+    --------------------------------------------------------------------------*/  
+    /**
+     * Construtor.
+     * 
+     * @param pathId A ID do caminho deste Pathname. Com ele eh possivel 
+     * recuperar o caminho absoluto do arquivo na estrutura PAHTMAP.
+     * 
+     * @param file O arquivo.
+     */   
     Pathname(final int pathId, final File file) {
         
         this.pathId = pathId;
         
-        filename = '/' + file.getName();
+        filename = File.separator + file.getName();
         
         int p = filename.lastIndexOf('.');
         
@@ -105,9 +140,15 @@ final class Pathname {
     }//construtor
     
     /*-------------------------------------------------------------------------
-            Insere na lista os dados de um match: pathname e se os 2
-            arquivos possuem o mesmo conteudo
-    --------------------------------------------------------------------------*/      
+
+    --------------------------------------------------------------------------*/  
+    /**
+     * Insere na lista os dados de um match: pathname e se os 2 arquivos possuem 
+     * o mesmo conteudo.
+     * 
+     * @param match
+     * @param isSameContent 
+     */    
     void addMatch(final Pathname match, final boolean isSameContent) {
         
         PreviousMatchInfo matchInfo = 
@@ -118,9 +159,13 @@ final class Pathname {
     }//addMatch
     
     /*-------------------------------------------------------------------------
-              Retorna a lista dos matches que ja foram catalogados para 
-              este pathname
-    --------------------------------------------------------------------------*/       
+
+    --------------------------------------------------------------------------*/ 
+    /**
+     * Retorna a lista dos matches que ja foram catalogados para este pathname.
+     * 
+     * @return A lista dos matches que ja foram catalogados para este pathname.
+     */
     List<PreviousMatchInfo> getList() {
         
         return matchesList;
@@ -128,8 +173,13 @@ final class Pathname {
     }//getList
     
     /*-------------------------------------------------------------------------
-                    Armazena o hash sha 256 deste pathname 
-    --------------------------------------------------------------------------*/       
+                    
+    --------------------------------------------------------------------------*/  
+    /**
+     * Armazena o hash sha 256 deste pathname.
+     * 
+     * @param sha O hash sha256 do conteudo do arquivo como uma string hex.
+     */
     void setSha(final String sha) {
         
         sha256 = sha;
@@ -137,9 +187,15 @@ final class Pathname {
     }//setSha
     
     /*-------------------------------------------------------------------------
-                Retorna o hash sha 256 deste pathname.Se for null,
-                o hash nao foi obtido ainda
-    --------------------------------------------------------------------------*/       
+
+    --------------------------------------------------------------------------*/  
+    /**
+     * Retorna o hash sha 256 deste pathname.Se for null, o hash nao foi obtido 
+     * ainda.
+     * 
+     * @return O hash sha 256 deste pathname.Se for null, o hash nao foi obtido 
+     * ainda.
+     */
     String getSha() {
         
         return sha256;
@@ -147,8 +203,13 @@ final class Pathname {
     }//getSha
     
     /*-------------------------------------------------------------------------
-                    Retorna o nome do arquivo sem a sua extensao
-    --------------------------------------------------------------------------*/       
+    
+    --------------------------------------------------------------------------*/  
+    /**
+     * Retorna o nome do arquivo sem a sua extensao.
+     *
+     * @return nome do arquivo sem a sua extensao.
+     */
     String getName() {
         
         return name;
@@ -156,8 +217,13 @@ final class Pathname {
     }//getName
     
     /*-------------------------------------------------------------------------
-                         Retorna o pathname absoluto do objeto
-    --------------------------------------------------------------------------*/   
+                        
+    --------------------------------------------------------------------------*/ 
+    /**
+     * Retorna o pathname absoluto do objeto.
+     * 
+     * @return o pathname absoluto do objeto.
+     */
     @Override
     public String toString() {
         
