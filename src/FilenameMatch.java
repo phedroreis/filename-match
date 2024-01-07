@@ -9,6 +9,7 @@ import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
@@ -39,7 +40,7 @@ public final class  FilenameMatch {
     Armazena o conjunto de todas as sequencias de tokens que produziram matches 
     entre arquivos
     */
-    private static final Set<String> MATCHES_SET = new TreeSet<>();
+    private static Set<String> matchesSet;
     
     /*
     Essa string define os caracteres que serao considerados delimitadores de
@@ -328,7 +329,7 @@ public final class  FilenameMatch {
     --------------------------------------------------------------------------*/  
     private static void listMatches() {
        
-       for (String match : MATCHES_SET) {
+       for (String match : matchesSet) {
            
            System.out.println("\nNomes de arquivos com \"" + match + "\" :\n");
            
@@ -498,7 +499,7 @@ public final class  FilenameMatch {
                 
                 if (matchCounter == matchLength) {
                                   
-                    MATCHES_SET.add(
+                    matchesSet.add(
                         getTokensSequence(
                             sourceArray,
                             srcIndex, 
@@ -635,12 +636,20 @@ public final class  FilenameMatch {
           
        try {
             
+            boolean order = true;
+            
             for (String arg : args) {
                 
                 if (arg.equals("-sha")) checkSha = true;
                 if (arg.equals("-full")) shortSearch = false;
                 if (arg.startsWith("-cs=")) consoleCharset = arg.substring(4);
+                if(arg.equals("-no-order")) order = false;
             }
+            
+            if (order) 
+                matchesSet = new TreeSet<>();
+            else 
+                matchesSet = new LinkedHashSet<>();
             
             console = new PrintStream(System.out, true, consoleCharset);
             
