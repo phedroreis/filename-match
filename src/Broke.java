@@ -146,7 +146,7 @@ public class Broke {
                 for (String tag : TAGS) {
                     
                     pattern = Pattern.compile(
-                        "<" + tag + ".*?>(!\u13a3)+?<\\/" + tag + ">"
+                        "<" + tag + "[\\s\\S]*?>[\\s\\S]*?<\\/" + tag + ">"
                     );
                         
                     matcher = pattern.matcher(content);
@@ -174,18 +174,24 @@ public class Broke {
                     //Linhas maiores que maxLength sao quebradas sucessivamente
                     while (line.length() > maxLength) {
                         
-                        String brokeCharFinder = line.substring(0, maxLength);
+                        String breakPointTester = line.substring(0, maxLength);
                         
-                        int p = brokeCharFinder.lastIndexOf('>');
-                        if (p == -1) p = brokeCharFinder.lastIndexOf(' ');
-                        if (p == -1) {
+                        int breakPoint = breakPointTester.lastIndexOf('>');
+                        if (breakPoint == -1) 
+                            breakPoint = breakPointTester.lastIndexOf(' ');
+                        
+                        //Nao quebrou no tam. desejado, tenta quebrar em qq
+                        //ponto alem do tam. desejado                       
+                        if (breakPoint == -1) {
                             unbrokenLines++;
-                            break;
+                            breakPoint = line.indexOf('>');
+                            if (breakPoint == -1) breakPoint = line.indexOf(' ');
+                            if (breakPoint == -1) break;
                         }
                         
-                        sb.append(line.substring(0, p + 1)).append('\n');
+                        sb.append(line.substring(0, breakPoint+1)).append('\n');
                         
-                        line = line.substring(p + 1, line.length());
+                        line = line.substring(breakPoint + 1, line.length());
                         
                     }//while
                     
