@@ -31,7 +31,7 @@ public class CountChars {
             
             StringBuilder sb = new StringBuilder(1024);
             
-            int countLines = 0;
+            int countLines = 1;
             
             while (scanner.hasNext()) {
                 
