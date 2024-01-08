@@ -12,48 +12,44 @@ import java.util.regex.Pattern;
 
 public class Broke {
     
-    private static final Map<String, String> MAP = new HashMap<>();
+    private static final Map<String, String> MAP = new HashMap<>(256);
     
-    private static final Pattern PRE =
-        Pattern.compile("<pre>(.|\\n)+?<\\/pre>");
-        
-    private static final Pattern STYLE =
-        Pattern.compile("<style>(.|\\n)+?<\\/style>"); 
-        
-    private static final Pattern SCRIPT =
-        Pattern.compile("<script>(.|\\n)+?<\\/script>"); 
+    private static final Map<String, Integer> WARNINGS = new HashMap<>(256);
     
+    private static final String[] TAGS = {"pre", "style", "script"};
+
     private static int maxLength;
     
-    private static int unbrokenLines = 0;
+    private static int unbrokenLines;
     
     /*-------------------------------------------------------------------------
         O programa nao quebra linhas dentro do escopo de tags pre, style e
-        script, pois isso pode afetar a exibicao da pagina. Quando eh encontrada
-        alguma linha, no escopo destas tags, que deveria ser quebrada mas nao
-        foi, o programa emite um alerta no terminal.
+        script, pois isso pode afetar a exibicao da pagina.
     --------------------------------------------------------------------------*/ 
-    private static void checkTagContent(
-        final String content, 
-        final String tagName
-    ) {
+    private static void checkTagContent(final String content) {
         
         Scanner scanner = new Scanner(content);
         
         while (scanner.hasNext()) {
+            
             String line = scanner.nextLine();
             
-            if (line.length() > maxLength) {
-                System.out.printf("\nAVISO: encontrada linha com mais de %,d" + 
-                    " caracteres no escopo de uma tag %s. Linha nao quebrada!", 
-                    maxLength, tagName
-                );
-                
-                unbrokenLines++;
-            }
+            if (line.length() > maxLength) unbrokenLines++;
+      
         }//while
         
     }//checkTagContent
+    
+    /*-------------------------------------------------------------------------
+          Retorna uma String contendo o caractere c repetido length vezes   
+    --------------------------------------------------------------------------*/  
+    private static String repeat(final char c, final int length) {
+        
+        StringBuilder s = new StringBuilder();
+        for (int i = 0; i < length; i++) s.append(c);
+        return s.toString();
+        
+    }//repeat    
     
     /*-------------------------------------------------------------------------
                                     
@@ -74,16 +70,19 @@ public class Broke {
                     
                     Se for JAR File digite java -jar NomeArq.jar max
 
-                    Onde 'max' deve ser o numero maximo de 
+                    Onde 'max' deve ser o n\u00famero m\u00e1ximo de 
                     caracteres  permitidos  em  uma  linha.
                     """
                 );
                 System.exit(0);
-            }
+                
+            }//if-else
 
-            File dirCurrent = new File(".");
-
-            String[] filenames = dirCurrent.list(
+            /*
+            Obtem um array com os nomes de todos os arquivos do tipo HTML no
+            diretorio corrente
+            */
+            String[] filenames = new File(".").list(
                 new FilenameFilter(){
                     @Override
                     public boolean accept(File f, String s) {
@@ -91,58 +90,88 @@ public class Broke {
                     }
                 }
             );
+            
+           /*
+            Tenta inicialmente criar uma barra de status de progresso de 60
+            caracteres de largura
+            */
+            int barLength = 61;
+            
+            //O num. de arqs. que cada pontinho na barra de status representa
+            int filesPerDot; 
+            
+            /*
+            O loop encontra o maior divisor de pathnamesListSize menor que 
+            61, cujo resto da divisao seja menor que o quociente da divisao.
+            
+            Este divisor serah o comprimento da barra de progresso. E cada ponto
+            impresso nesta barra irah representar um numero de arquivos
+            processados que eh igual ao quociente (filesPerDot) dessa divisao
+            */
+            do {
+     
+            } while (
+                (filenames.length % --barLength) >= 
+                (filesPerDot = filenames.length / barLength)
+            );
+                   
+            //Conta o num. de arqs. jah processados
+            int countFiles = 0; 
+            
+            //Imprime a barra de progresso
+            System.out.print("\n0%|" + repeat(' ', barLength) + "|100%\n   ");            
 
+            /*
+            Processa cada arquivo HTML no diretorio corrente
+            */
             for (String filename: filenames) {
                 
-                System.out.println("\nQuebrando " + filename + " ...\n");
-
-                Path path = Path.of(filename);
-
+                unbrokenLines = 0;
+                
+                Path path = Path.of(filename);//Objeto p/ acessar o arquivo
+                
+                //Joga o conteudo do arquivo pra dentro da String content
                 String content = Files.readString(path);
                 
                 int countMatches = 0;  
                 
                 String group; String replacer;
                 
-                Matcher matcher = PRE.matcher(content);
+                Pattern pattern;
                 
-                while (matcher.find()) {
-                    group = matcher.group();
-                    checkTagContent(group, "<pre>");
-                    replacer = "#" + countMatches++ + "A5FE34BC";
-                    MAP.put(replacer, group);
-                    content = content.replace(group, replacer);
-                }
-                
-                matcher = STYLE.matcher(content);
-                
-                while (matcher.find()) {
-                    group = matcher.group();
-                    checkTagContent(group, "<style>");                
-                    replacer = "#" + countMatches++ + "A5FE34BC";
-                    MAP.put(replacer, group);
-                    content = content.replace(group, replacer);
-                }   
-
-                matcher = SCRIPT.matcher(content);
-                
-                while (matcher.find()) {
-                    group = matcher.group();
-                    checkTagContent(group, "<script>");
-                    replacer = "#" + countMatches++ + "A5FE34BC";
-                    MAP.put(replacer, group);
-                    content = content.replace(group, replacer);
-                }                  
-                 
+                Matcher matcher;
+                /*
+                Substitui todas as tags pre, style e script por marcadores. 
+                */
+                for (String tag : TAGS) {
+                    
+                    pattern = Pattern.compile(
+                        "<" + tag + ".*?>(!\u13a3)+?<\\/" + tag + ">"
+                    );
+                        
+                    matcher = pattern.matcher(content);
+                    
+                    while (matcher.find()) {
+                        group = matcher.group();
+                        checkTagContent(group);
+                        replacer = "#" + countMatches++ + "A5FE34BC";
+                        MAP.put(replacer, group);
+                        content = content.replace(group, replacer);
+                    }//while
+                    
+                }//for
+                    
+                    
                 Scanner scanner = new Scanner(content);
 
-                StringBuilder sb = new StringBuilder(1024);
+                StringBuilder sb = new StringBuilder(65536);
 
-
+                //Le linha por linha do arquivo 
                 while (scanner.hasNext()) {
 
                     String line = scanner.nextLine();
 
+                    //Linhas maiores que maxLength sao quebradas sucessivamente
                     while (line.length() > maxLength) {
                         
                         String brokeCharFinder = line.substring(0, maxLength);
@@ -150,7 +179,6 @@ public class Broke {
                         int p = brokeCharFinder.lastIndexOf('>');
                         if (p == -1) p = brokeCharFinder.lastIndexOf(' ');
                         if (p == -1) {
-                            System.out.println("AVISO: linha nao quebrada!");
                             unbrokenLines++;
                             break;
                         }
@@ -165,24 +193,43 @@ public class Broke {
 
                 }//while
                 
+                //Recebe o conteudo do arquivo com as linhas quebradas
                 content = sb.toString();
                 
+                //Reinsere as tags pre, style e script no lugar dos marcadores
                 for (String key: MAP.keySet()) {
                     
                     content = content.replace(key, MAP.get(key));
                     
-                }
+                }//for
 
-                try (PrintWriter pw = new PrintWriter(filename + ".broke.html")) {
+                //Grava em um arquivo com o nome do arquivo original e a 
+                //extensao broke.html
+                try (
+                    PrintWriter pw = new PrintWriter(filename + ".broke.html")
+                ) {
 
                     pw.print(content);
 
-                }//try   
+                }//try  
                 
+                //A cada countFiles arqs. processados, um ponto eh impresso na 
+                //barra de progresso
+                if (++countFiles % filesPerDot == 0) System.out.print("."); 
+
+                if (unbrokenLines > 0) WARNINGS.put(filename, unbrokenLines);
+                    
             }//for
             
-            System.out.printf("\n%,d linhas nao quebradas.\n", unbrokenLines);
-        
+            System.out.println("\n\nFeito!\n");
+            
+            for (String key : WARNINGS.keySet()) {
+                System.out.println(
+                    key + " : " + WARNINGS.get(key) + 
+                    " linha(s) n\u00e3o quebrada(s)"
+                );
+            }
+         
         }//try
         catch (IOException e) {
             
@@ -191,7 +238,7 @@ public class Broke {
         }
         catch (NumberFormatException e) {
             
-            System.out.println("Numero max. invalido!");
+            System.out.println("N\u00famero max. inv\u00e1lido!");
             
         }
            
