@@ -4,14 +4,62 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Scanner;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class Broke {
     
+    private static final Map<String, String> MAP = new HashMap<>();
+    
+    private static final Pattern PRE =
+        Pattern.compile("<pre>(.|\\n)+?<\\/pre>");
+        
+    private static final Pattern STYLE =
+        Pattern.compile("<style>(.|\\n)+?<\\/style>"); 
+        
+    private static final Pattern SCRIPT =
+        Pattern.compile("<script>(.|\\n)+?<\\/script>"); 
+    
+    private static int maxLength;
+    
+    private static int unbrokenLines = 0;
+    
+    /*-------------------------------------------------------------------------
+        O programa nao quebra linhas dentro do escopo de tags pre, style e
+        script, pois isso pode afetar a exibicao da pagina. Quando eh encontrada
+        alguma linha, no escopo destas tags, que deveria ser quebrada mas nao
+        foi, o programa emite um alerta no terminal.
+    --------------------------------------------------------------------------*/ 
+    private static void checkTagContent(
+        final String content, 
+        final String tagName
+    ) {
+        
+        Scanner scanner = new Scanner(content);
+        
+        while (scanner.hasNext()) {
+            String line = scanner.nextLine();
+            
+            if (line.length() > maxLength) {
+                System.out.printf("\nAVISO: encontrada linha com mais de %,d" + 
+                    " caracteres no escopo de uma tag %s. Linha nao quebrada!", 
+                    maxLength, tagName
+                );
+                
+                unbrokenLines++;
+            }
+        }//while
+        
+    }//checkTagContent
+    
+    /*-------------------------------------------------------------------------
+                                    
+    --------------------------------------------------------------------------*/ 
     public static void main(String[] args) {
-        
-        int maxLength = -1;
-        
+                       
         try {
             
             if (args.length > 0) 
@@ -51,17 +99,49 @@ public class Broke {
                 Path path = Path.of(filename);
 
                 String content = Files.readString(path);
+                
+                int countMatches = 0;  
+                
+                String group; String replacer;
+                
+                Matcher matcher = PRE.matcher(content);
+                
+                while (matcher.find()) {
+                    group = matcher.group();
+                    checkTagContent(group, "<pre>");
+                    replacer = "#" + countMatches++ + "A5FE34BC";
+                    MAP.put(replacer, group);
+                    content = content.replace(group, replacer);
+                }
+                
+                matcher = STYLE.matcher(content);
+                
+                while (matcher.find()) {
+                    group = matcher.group();
+                    checkTagContent(group, "<style>");                
+                    replacer = "#" + countMatches++ + "A5FE34BC";
+                    MAP.put(replacer, group);
+                    content = content.replace(group, replacer);
+                }   
 
+                matcher = SCRIPT.matcher(content);
+                
+                while (matcher.find()) {
+                    group = matcher.group();
+                    checkTagContent(group, "<script>");
+                    replacer = "#" + countMatches++ + "A5FE34BC";
+                    MAP.put(replacer, group);
+                    content = content.replace(group, replacer);
+                }                  
+                 
                 Scanner scanner = new Scanner(content);
 
                 StringBuilder sb = new StringBuilder(1024);
 
-                int countLines = 0;
 
                 while (scanner.hasNext()) {
 
                     String line = scanner.nextLine();
-                    countLines++;
 
                     while (line.length() > maxLength) {
                         
@@ -70,9 +150,8 @@ public class Broke {
                         int p = brokeCharFinder.lastIndexOf('>');
                         if (p == -1) p = brokeCharFinder.lastIndexOf(' ');
                         if (p == -1) {
-                            System.out.println(
-                                "Impossivel quebrar linha " + countLines
-                            );
+                            System.out.println("AVISO: linha nao quebrada!");
+                            unbrokenLines++;
                             break;
                         }
                         
@@ -85,14 +164,24 @@ public class Broke {
                     sb.append(line).append('\n');
 
                 }//while
+                
+                content = sb.toString();
+                
+                for (String key: MAP.keySet()) {
+                    
+                    content = content.replace(key, MAP.get(key));
+                    
+                }
 
                 try (PrintWriter pw = new PrintWriter(filename + ".broke.html")) {
 
-                    pw.print(sb.toString());
+                    pw.print(content);
 
                 }//try   
                 
             }//for
+            
+            System.out.printf("\n%,d linhas nao quebradas.\n", unbrokenLines);
         
         }//try
         catch (IOException e) {
@@ -108,4 +197,4 @@ public class Broke {
            
     }//main
     
-}
+}//classe Broke

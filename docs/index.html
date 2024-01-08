@@ -15,9 +15,13 @@
     ol {
       line-height: 29px;
     }
+    h4 {
+      text-decoration: underline;
+    }
     p {
       text-indent: 1%;
       line-height:22px;
+      text-align: justify;
     }
     u {
       background-color: black;
@@ -66,14 +70,14 @@
       <p>6 - Uma expressão regular pode ser indicada para selecionar os padrões de nomes de arquivos que podem ser comparados. Essa regex não será aplicada às extensões dos arquivos e nem aos seus caminhos, restringindo-se apenas a filtrar a parte que corresponde ao nome do arquivo. Por default, qualquer nome de arquivo é elegível para ser pesquisado.</p>
       <p>Sintaxes de regex podem variar ligeiramente dependendo da linguagem de programação usada. O programa utiliza a sintaxe regex da linguagem de programação Java.</p>
       <p>7 - Seleciona que tipos de arquivos (extensões) podem ser pesquisados. Por default todos os tipos de arquivo são pesquisados.</p>
-
+      <h4>Busca exaustiva x curto-circuito</h4>
      <p>O programa tanto pode fazer uma pesquisa exaustiva (encontrando toda e qualquer substring em comum em nomes de arquivos), como pode fazer esta pesquisa em curto circuito, onde apenas a primeira ocorrência coincidente é catalogada.</p>
-     <h4>Modo exaustivo (flag -full)</h4>
+     <h5>Modo exaustivo (flag -full)</h5>
      <p>Se for, por exemplo, selecionado que sequências coincidentes devem ter no mínimo 3 palavras, então serão comparadas todas as possíveis sequências com 3 palavras entre dois nomes de arquivos.</p>
-     <h4>Modo curto-circuito (default)</h4>
+     <h5>Modo curto-circuito (default)</h5>
      <p>O loop que realiza todas as comparações possíveis é interrompido assim que uma primeira sequência coincidente é encontrada. (E estes 2 arquivos são listados como coincidentes nessa sequência de tokens)</p>
 
-     <h4>Comparação entre busca exaustiva e curto-circuito</h4>
+     <h5>Comparação de desempenho entre busca exaustiva e curto-circuito</h5>
      <blockquote>
       <pre>
         Algumas estatísticas:
@@ -122,7 +126,7 @@
 
       <p>Exemplo: <b><i>java&nbsp;-jar&nbsp;FilenameMatch.jar&nbsp;-cs=us-ascii</i></b></p>
       <p>UTF-8 é o encoding default do programa, mas isso pode ser atterado editando-se a linha 85 do fonte FilenameMatch.java.</p>
-      <p><code><pre>private static String consoleCharset = "utf8";  </pre></code></p>
+      <p><code><pre>private static String consoleCharset = "utf8"; </pre></code></p>
 
       <h4>Matches listados em ordem alfabética</h4>
       <p>Os matches, por default, serão listados em ordem alfabética.</p>
@@ -138,7 +142,7 @@
 
     <section>
     <h2>Compilação</h2>
-      <p>Pode ser compilado com <i><b>&nbsp;FilenameMatch.java</b></i>, o que irá gerar todos os .class necessários.</p>
+      <p>Pode ser compilado com <i><b>javac&nbsp;FilenameMatch.java</b></i>, o que irá gerar todos os .class necessários.</p>
       <p>Pode ser compilado também pela IDE BlueJ.</p>
       <p>Para isto basta abrir a pasta src com os fontes, com a opção <u>Abrir Projeto não BlueJ</u>, selecionar com o mouse a classe principal FilenameMatch e clicar em <u>Compilar</u>.</p>
       <p>Porém, pode ser útil saber que esta IDE se instala com seu próprio JDK, que pode até ser mais recente que o instalado no sistema.</p>
