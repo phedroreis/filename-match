@@ -22,6 +22,8 @@ public class Broke {
     
     private static int unbrokenLines;
     
+    private static int brokenLines;
+    
     /*-------------------------------------------------------------------------
         O programa nao quebra linhas dentro do escopo de tags pre, style e
         script, pois isso pode afetar a exibicao da pagina.
@@ -126,7 +128,7 @@ public class Broke {
             */
             for (String filename: filenames) {
                 
-                unbrokenLines = 0;
+                unbrokenLines = 0; brokenLines = 0;
                 
                 Path path = Path.of(filename);//Objeto p/ acessar o arquivo
                 
@@ -189,6 +191,8 @@ public class Broke {
                             if (breakPoint == -1) break;
                         }
                         
+                        brokenLines++;
+                        
                         sb.append(line.substring(0, breakPoint+1)).append('\n');
                         
                         line = line.substring(breakPoint + 1, line.length());
@@ -211,20 +215,25 @@ public class Broke {
 
                 //Grava em um arquivo com o nome do arquivo original e a 
                 //extensao broke.html
-                try (
-                    PrintWriter pw = new PrintWriter(filename + ".broke.html")
-                ) {
+                if (brokenLines > 0) {
+                    try (
+                        PrintWriter pw = 
+                            new PrintWriter(filename + ".broke.html")
+                    ) {
 
-                    pw.print(content);
+                        pw.print(content);
 
-                }//try  
+                    }//try  
+                    
+                    
+                    if (unbrokenLines > 0) 
+                        WARNINGS.put(filename, unbrokenLines);
+                }
                 
                 //A cada countFiles arqs. processados, um ponto eh impresso na 
                 //barra de progresso
                 if (++countFiles % filesPerDot == 0) System.out.print("."); 
-
-                if (unbrokenLines > 0) WARNINGS.put(filename, unbrokenLines);
-                    
+      
             }//for
             
             System.out.println("\n\nFeito!\n");
